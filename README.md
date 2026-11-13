@@ -135,3 +135,14 @@ Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
   (sessionStorage); gerbang PIN Rekap Guru yang lama memakai sistem yang sama.
 
 - Pengaturan Jadwal PINDAH dari Rekap Guru ke halaman Kartu & QR (13 Nov 21.44 WIB): hanya super admin (PIN 112233) yang dapat mengubah jadwal; Rekap Guru (PIN 1234) tidak lagi berisi tab Pengaturan; penandaan Sakit/Izin wali kelas tetap di Rekap Guru.
+
+## Tampilan Scan disederhanakan (13 Nov 2026, 22.20 WIB)
+- Setelah masuk (PIN 1234), halaman Scan hanya menampilkan: chip tanggal/jam,
+  4 kartu mode, tombol "📷 Nyalakan Kamera", dan 4 penghitung — ditambah satu
+  tombol "📋 CARA CADANGAN".
+- Daftar kartu nama siswa + ketik NIS (cara manual) pindah ke balik tombol
+  CARA CADANGAN; isinya tidak berubah (judul dan lencana mengikuti mode yang
+  terpilih), hanya tersembunyi sampai tombol ditekan, ditekan lagi / tombol
+  "✕ Tutup Cara Cadangan" untuk menyembunyikan lagi. Status sinkron dan
+  "Aktivitas Scan Terakhir" disembunyikan dari halaman Scan (status sinkron
+  tetap terlihat di halaman Rekap Guru).

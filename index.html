@@ -268,8 +268,8 @@
   <!-- ============ SCAN ============ -->
   <section class="view" id="view-scan">
     <button type="button" class="btn ghost small no-print" style="margin:14px 0 4px" data-ke-beranda>&larr; Beranda</button>
-    <h2>Scan Absensi — Pilih Jenisnya Dulu</h2>
-    <p class="lead">Absensi datang, sholat dhuhur, dan pulang sekarang <b>terpisah</b>, ditambah satu mode khusus <b>Scan Berhalangan</b>. Petugas di gerbang memilih mode <b>Datang</b>; siswa yang sudah sholat memindai kartunya saat keluar masjid dengan mode <b>Sholat Dhuhur</b>; guru piket yang tidak memimpin sholat berkeliling lingkungan sekolah dan memindai kartu siswa yang tidak sholat karena berhalangan dengan mode <b>Scan Berhalangan</b>; petugas pulang memilih mode <b>Pulang</b>. Keempatnya memakai QR yang sama di Kartu Siswa. Scan pada satu mode tidak memengaruhi mode lain, dan scan ganda pada mode yang sama di hari yang sama ditolak. Gunakan <b>pemindai kamera</b> di bawah untuk memindai Kartu Siswa sungguhan (unduh/cetak kartunya di tab <b>Kartu &amp; QR</b>), atau ketuk kartu nama siswa / ketik NIS sebagai cara cadangan.</p>
+    <h2 class="hidden">Scan Absensi — Pilih Jenisnya Dulu</h2>
+    <p class="lead hidden">Absensi datang, sholat dhuhur, dan pulang sekarang <b>terpisah</b>, ditambah satu mode khusus <b>Scan Berhalangan</b>. Petugas di gerbang memilih mode <b>Datang</b>; siswa yang sudah sholat memindai kartunya saat keluar masjid dengan mode <b>Sholat Dhuhur</b>; guru piket yang tidak memimpin sholat berkeliling lingkungan sekolah dan memindai kartu siswa yang tidak sholat karena berhalangan dengan mode <b>Scan Berhalangan</b>; petugas pulang memilih mode <b>Pulang</b>. Keempatnya memakai QR yang sama di Kartu Siswa. Scan pada satu mode tidak memengaruhi mode lain, dan scan ganda pada mode yang sama di hari yang sama ditolak. Gunakan <b>pemindai kamera</b> di bawah untuk memindai Kartu Siswa sungguhan (unduh/cetak kartunya di tab <b>Kartu &amp; QR</b>), atau ketuk kartu nama siswa / ketik NIS sebagai cara cadangan.</p>
 
     <div class="modes" role="tablist" aria-label="Pilih jenis absensi">
       <button type="button" class="mode mode-datang" role="tab" aria-selected="true" data-mode="datang">
@@ -289,11 +289,11 @@
         <span class="md">Dipakai guru piket yang berkeliling sekolah: pindai kartu siswa yang tidak sholat karena berhalangan (haid / sakit / izin) → terekap Berhalangan.</span>
       </button>
     </div>
-    <div class="mode-banner" id="modeBanner" role="status"></div>
+    <div class="mode-banner hidden" id="modeBanner" role="status"></div>
 
     <div class="card cam-card">
-      <h3 style="margin-top:0">📷 Pemindai Kamera — Scan QR Kartu Siswa</h3>
-      <p class="lead" style="margin-bottom:12px">Ketuk <b>Nyalakan Kamera</b>, izinkan akses kamera bila HP meminta, lalu arahkan QR pada Kartu Siswa ke dalam kotak pemindai. Hasil scan langsung tercatat sesuai <b>mode yang dipilih di atas</b>. Kartunya dapat diunduh atau dicetak dari tab <b>Kartu &amp; QR</b> — cetak satu kartu, lalu pindai dari HP ini atau tampilkan kartu di layar perangkat lain dan pindai dari sini.</p>
+      <h3 style="margin-top:0" class="hidden">📷 Pemindai Kamera — Scan QR Kartu Siswa</h3>
+      <p class="lead hidden" style="margin-bottom:12px">Ketuk <b>Nyalakan Kamera</b>, izinkan akses kamera bila HP meminta, lalu arahkan QR pada Kartu Siswa ke dalam kotak pemindai. Hasil scan langsung tercatat sesuai <b>mode yang dipilih di atas</b>. Kartunya dapat diunduh atau dicetak dari tab <b>Kartu &amp; QR</b> — cetak satu kartu, lalu pindai dari HP ini atau tampilkan kartu di layar perangkat lain dan pindai dari sini.</p>
       <div class="cam-wrap">
         <div class="cam-idle" id="camIdle">Kamera belum menyala.<br />Pastikan halaman dibuka lewat koneksi aman (https) dan izin kamera diberikan.</div>
         <video id="camVideo" playsinline muted class="hidden"></video>
@@ -304,12 +304,13 @@
         <button type="button" class="btn" id="camStartBtn">📷 Nyalakan Kamera</button>
         <button type="button" class="btn ghost hidden" id="camStopBtn">Matikan Kamera</button>
       </div>
-      <p class="cam-status" id="camStatus" role="status">Kamera mati. Cara cadangan tetap tersedia: ketuk nama siswa atau ketik NIS di bawah.</p>
+      <p class="cam-status" id="camStatus" role="status">Kamera mati. Bila kamera tidak bisa dipakai, gunakan tombol CARA CADANGAN di bawah.</p>
     </div>
 
     <div class="flash" id="flash" role="status"></div>
     <div class="stats" id="scanStats"></div>
-    <div class="scan-grid">
+    <button type="button" class="btn" id="caraCadanganBtn" aria-expanded="false" aria-controls="cadanganPanel" style="width:100%;margin:0 0 18px">📋 CARA CADANGAN</button>
+    <div id="cadanganPanel" class="hidden">
       <div class="card">
         <h3 style="margin-top:0" id="scanCardTitle">Simulasi Scan — Ketuk Nama Siswa</h3>
         <div class="pupils" id="pupilGrid"></div>
@@ -322,10 +323,11 @@
           <p class="lead" style="margin:0">Berhalangan <b>tidak lagi ditandai manual</b>. Alurnya: siswa yang sudah sholat memindai kartunya saat keluar masjid/mushola (mode <b>Sholat Dhuhur</b>). Guru piket yang tidak memimpin sholat berkeliling lingkungan sekolah; bila menemukan siswa yang tidak sholat dan alasannya berhalangan — misalnya haid — guru piket <b>memindai kartu siswa itu</b> dengan mode <b>Scan Berhalangan</b>, sehingga siswa tersebut terekap <b>Berhalangan</b>, bukan Tidak Sholat. Coba di sini: pilih mode <b>4 · Scan Berhalangan</b> di atas, lalu ketuk nama siswa atau ketik NIS-nya.</p>
         </div>
       </div>
-      <div class="card">
-        <h3 style="margin-top:0">Aktivitas Scan Terakhir</h3>
-        <ul class="feed" id="feed"></ul>
-      </div>
+      <button type="button" class="btn ghost" id="cadanganTutupBtn" style="width:100%;margin-top:12px">✕ Tutup Cara Cadangan</button>
+    </div>
+    <div class="card hidden">
+      <h3 style="margin-top:0">Aktivitas Scan Terakhir</h3>
+      <ul class="feed" id="feed"></ul>
     </div>
   </section>
 
@@ -1049,7 +1051,7 @@ function buatPengaturanAdmin(){
 /* ---------- Lencana status sinkronisasi (teks, bukan hanya warna) ---------- */
 (function(){
   var p1 = document.createElement("p");
-  p1.id = "syncStatus"; p1.className = "cam-status";
+  p1.id = "syncStatus"; p1.className = "cam-status hidden"; /* disembunyikan: tampilan Scan dibuat sesederhana mungkin */
   p1.textContent = "Memeriksa status sinkronisasi…";
   var stats = document.getElementById("scanStats");
   if (stats && stats.parentNode) stats.parentNode.insertBefore(p1, stats.nextSibling);
@@ -1273,17 +1275,27 @@ function statusDatang(rec){
   return rec.masuk > JADWAL.batasTerlambat ? "terlambat" : "tepat";
 }
 function badgeFor(rec, dateKey, nis){
+  /* Lencana diurutkan mengikuti mode yang terpilih: lencana mode aktif tampil
+     paling depan. Mode Datang menghasilkan urutan persis seperti sebelumnya. */
   if (rec && rec.absen && !rec.masuk) return badgeAbsen(rec.absen)+' '+badgeSholat(dateKey, nis);
-  if (!rec || (!rec.masuk && !rec.alpa)) return '<span class="badge b-none">Belum datang</span> '+badgeSholat(dateKey, nis);
+  var d, s, p;
+  if (!rec || (!rec.masuk && !rec.alpa)){
+    d = '<span class="badge b-none">Belum datang</span>';
+    s = badgeSholat(dateKey, nis);
+    if (scanMode === "sholat" || scanMode === "halangan") return s+' '+d;
+    if (scanMode === "pulang") return '<span class="badge b-none">Belum pulang</span> '+d+' '+s;
+    return d+' '+s;
+  }
   if (rec.alpa) return '<span class="badge b-bad">Tidak hadir</span>';
-  var s = "";
-  s += statusDatang(rec)==="terlambat"
+  d = statusDatang(rec)==="terlambat"
     ? '<span class="badge b-warn">Terlambat '+rec.masuk+'</span>'
     : '<span class="badge b-ok">Datang '+rec.masuk+'</span>';
-  s += ' ' + badgeSholat(dateKey, nis);
-  s += rec.pulang ? ' <span class="badge b-info">Pulang '+rec.pulang+'</span>'
-                  : ' <span class="badge b-none">Belum pulang</span>';
-  return s;
+  s = badgeSholat(dateKey, nis);
+  p = rec.pulang ? '<span class="badge b-info">Pulang '+rec.pulang+'</span>'
+                 : '<span class="badge b-none">Belum pulang</span>';
+  if (scanMode === "sholat" || scanMode === "halangan") return s+' '+d+' '+p;
+  if (scanMode === "pulang") return p+' '+d+' '+s;
+  return d+' '+s+' '+p;
 }
 
 /* ---------- Mode scan terpisah: datang | sholat | pulang ---------- */
@@ -1302,6 +1314,19 @@ modeBtns.forEach(function(b){
     renderScan();
   });
 });
+
+/* ---------- CARA CADANGAN: daftar kartu nama disembunyikan di balik tombol ---------- */
+function aturCadangan(buka){
+  var panel = document.getElementById("cadanganPanel");
+  var btn = document.getElementById("caraCadanganBtn");
+  panel.classList.toggle("hidden", !buka);
+  btn.setAttribute("aria-expanded", buka ? "true" : "false");
+  btn.textContent = buka ? "\u2715 TUTUP CARA CADANGAN" : "\uD83D\uDCCB CARA CADANGAN";
+}
+document.getElementById("caraCadanganBtn").addEventListener("click", function(){
+  aturCadangan(document.getElementById("cadanganPanel").classList.contains("hidden"));
+});
+document.getElementById("cadanganTutupBtn").addEventListener("click", function(){ aturCadangan(false); });
 function renderScan(){
   var k = keyOf(new Date());
   document.getElementById("modeBanner").textContent = MODE_INFO[scanMode].banner;
@@ -2285,11 +2310,11 @@ function matikanKamera(pesan){
   if (pesan) camStatus(pesan);
 }
 document.getElementById("camStopBtn").addEventListener("click", function(){
-  matikanKamera("Kamera dimatikan. Cara cadangan tetap tersedia: ketuk nama siswa atau ketik NIS di bawah.");
+  matikanKamera("Kamera dimatikan. Cara cadangan: ketuk tombol CARA CADANGAN di bawah untuk mencatat lewat daftar nama / NIS.");
 });
 document.getElementById("camStartBtn").addEventListener("click", function(){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
-    camStatus("Peramban ini tidak menyediakan akses kamera (getUserMedia tidak tersedia). Buka halaman ini lewat https di Chrome/Edge/Safari terbaru, atau pakai cara cadangan: ketuk nama siswa / ketik NIS.", true);
+    camStatus("Peramban ini tidak menyediakan akses kamera (getUserMedia tidak tersedia). Buka halaman ini lewat https di Chrome/Edge/Safari terbaru, atau pakai cara cadangan lewat tombol CARA CADANGAN di bawah.", true);
     return;
   }
   camStatus("Meminta izin kamera…");
@@ -2314,11 +2339,11 @@ document.getElementById("camStartBtn").addEventListener("click", function(){
     if (nama === "NotAllowedError" || nama === "SecurityError")
       camStatus("Izin kamera ditolak. Ubah lewat Chrome > titik tiga > Setelan > Setelan situs > Kamera, cari masgurubudi.github.io, pilih Izinkan, lalu ketuk Nyalakan Kamera lagi.", true);
     else if (nama === "NotFoundError" || nama === "OverconstrainedError")
-      camStatus("Tidak ditemukan kamera pada perangkat ini. Pakai perangkat lain yang berkamera, atau cara cadangan: ketuk nama siswa / ketik NIS.", true);
+      camStatus("Tidak ditemukan kamera pada perangkat ini. Pakai perangkat lain yang berkamera, atau cara cadangan lewat tombol CARA CADANGAN di bawah.", true);
     else if (nama === "NotReadableError")
       camStatus("Kamera sedang dipakai aplikasi lain. Tutup aplikasi itu dulu, lalu coba lagi.", true);
     else
-      camStatus("Kamera gagal dinyalakan ("+(nama || "galat tidak dikenal")+"). Pastikan halaman dibuka lewat https, lalu coba lagi — atau pakai cara cadangan di bawah.", true);
+      camStatus("Kamera gagal dinyalakan ("+(nama || "galat tidak dikenal")+"). Pastikan halaman dibuka lewat https, lalu coba lagi — atau pakai cara cadangan lewat tombol CARA CADANGAN di bawah.", true);
     matikanKamera();
     camStatusEl.classList.add("err");
   });
