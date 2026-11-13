@@ -1,0 +1,49 @@
+ATURAN FIRESTORE — Absensi Siswa QR (versi sebenarnya)
+========================================================
+CARA MEMASANG (dilakukan Mas Budi di Firebase Console, seperti aplikasi Try Out):
+1. Buka console.firebase.google.com → proyek database-mpi-spendaka
+2. Build → Firestore Database → tab Rules
+3. Tambahkan KEDUA blok `match` di bawah ini DI DALAM kurung
+   `match /databases/{database}/documents { ... }`, di samping blok koleksi
+   lain yang sudah ada (tryout_tka_kabupaten, tryout_tka_sd, kuis_bilangan_bulat).
+   JANGAN hapus aturan yang sudah ada.
+4. Ketuk Publish.
+
+CATATAN:
+- Aturan ini mengizinkan HP guru mana pun membaca dan menulis catatan absensi
+  (aplikasi tidak memakai login akun guru — sama seperti aplikasi Try Out).
+- Yang boleh ditulis hanya medan yang dikenal, dengan tipe yang benar.
+- Hapus dokumen TIDAK diizinkan (pembatalan dilakukan dengan menghapus medan,
+  bukan dokumennya).
+- SEBELUM aturan ini diterbitkan, aplikasi tetap jalan penuh secara lokal
+  (scan + rekap dari data HP itu), tetapi catatan belum terkirim ke server dan
+  belum terlihat di HP guru lain. Antrean di HP terkirim otomatis begitu
+  aturan aktif dan HP kembali online.
+
+--- SALIN DARI SINI (dua blok match) ---
+
+    match /absensi_siswa_qr/{docId} {
+      allow read: if true;
+      allow create, update: if request.resource.data.tanggal is string
+        && request.resource.data.nis is string
+        && request.resource.data.nama is string
+        && request.resource.data.kelas is string
+        && (!('masuk' in request.resource.data) || request.resource.data.masuk is string)
+        && (!('terlambat' in request.resource.data) || request.resource.data.terlambat is bool)
+        && (!('sholat' in request.resource.data) || request.resource.data.sholat in ['sudah', 'berhalangan'])
+        && (!('sholatJam' in request.resource.data) || request.resource.data.sholatJam is string)
+        && (!('halanganJam' in request.resource.data) || request.resource.data.halanganJam is string)
+        && (!('pulang' in request.resource.data) || request.resource.data.pulang is string)
+        && (!('absen' in request.resource.data) || (request.resource.data.absen.jenis in ['sakit', 'izin']
+            && request.resource.data.absen.keterangan is string));
+      allow delete: if false;
+    }
+
+    match /config/jadwal {
+      allow read: if true;
+      allow create, update: if request.resource.data.jamMasuk is string
+        && request.resource.data.batasTerlambat is string;
+      allow delete: if false;
+    }
+
+--- SAMPAI SINI ---

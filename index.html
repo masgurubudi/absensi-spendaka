@@ -1,0 +1,2207 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>Aplikasi Absensi Siswa QR</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+<script src="./qrcode.min.js"></script>
+<script src="./firebase-app-compat.js"></script>
+<script src="./firebase-firestore-compat.js"></script>
+<script src="./roster.js"></script>
+<script src="./jsQR.min.js"></script>
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#43617d">
+<style>
+  :root{
+    --bg:#eef2f5; --surface:#ffffff; --surface2:#e3ebf1; --ink:#1c2b36; --ink2:#54687a;
+    --line:#c9d6df; --brand:#43617d; --brand-dark:#2f485f; --gold:#b98a2f; --gold-soft:#f3e5c3;
+    --ok:#1e7d46; --ok-bg:#e2f3e8; --warn:#9a6206; --warn-bg:#fdf0d3;
+    --bad:#b3362b; --bad-bg:#fbe7e4; --info-bg:#e4edf5;
+    --radius:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#10181f; --surface:#1a2631; --surface2:#243442; --ink:#e8eff4; --ink2:#a9bccb;
+      --line:#33485c; --brand:#7ba3c4; --brand-dark:#a9c6de; --gold:#d9ab4e; --gold-soft:#3d321e; --ok:#5ec98a; --ok-bg:#173a26; --warn:#eec27a; --warn-bg:#3d3014;
+      --bad:#f0928a; --bad-bg:#40201c; --info-bg:#22384c;
+    }
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{margin:0;font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:var(--bg);color:var(--ink);line-height:1.5}
+  button,select,input{font:inherit;min-height:44px}
+  .mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 16px 56px}
+
+  /* ---------- header ---------- */
+  header.top{background:var(--brand-dark);color:#fff;padding:22px 0 0}
+  @media (prefers-color-scheme: dark){ header.top{background:#0d141b} }
+  .top-in{max-width:1060px;margin:0 auto;padding:0 16px}
+  .school{font-size:.82rem;letter-spacing:.04em;opacity:.85;font-weight:600}
+  h1{font-size:clamp(1.45rem,4.5vw,2.1rem);margin:2px 0 4px;font-weight:800;line-height:1.15}
+  .sub{opacity:.88;font-size:.95rem;max-width:640px;margin:0 0 16px}
+  .clockbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding-bottom:16px}
+  .clock{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);border-radius:10px;padding:6px 14px;font-weight:600}
+  .clock b{font-family:"IBM Plex Mono",monospace;font-size:1.05rem}
+  .chip-rule{background:var(--gold);color:#231a05;border-radius:999px;padding:6px 14px;font-weight:700;font-size:.85rem}
+
+  nav.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0 20px}
+  nav.tabs button{flex:1 1 auto;min-width:130px;border:1.5px solid var(--line);background:var(--surface);color:var(--ink);
+    border-radius:12px;padding:10px 12px;font-weight:700;cursor:pointer;font-size:.98rem}
+  nav.tabs button[aria-selected="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+  @media (prefers-color-scheme: dark){ nav.tabs button[aria-selected="true"]{color:#0d1620} }
+
+  section.view{display:none}
+  section.view.active{display:block}
+  h2{font-size:1.25rem;margin:0 0 6px;font-weight:800}
+  h3{font-size:1.05rem;margin:22px 0 8px;font-weight:800}
+  .lead{color:var(--ink2);margin:0 0 16px;max-width:680px}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px}
+  .note{background:var(--gold-soft);border:1px solid var(--gold);border-radius:var(--radius);padding:12px 16px;font-size:.92rem;margin-bottom:16px}
+  .note b{font-weight:800}
+
+  /* ---------- stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:0 0 18px}
+  @media(min-width:640px){.stats{grid-template-columns:repeat(4,1fr)}}
+  .stat{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px}
+  .stat .num{font-size:1.9rem;font-weight:800;line-height:1.1;font-family:"IBM Plex Mono",monospace}
+  .stat .lbl{color:var(--ink2);font-size:.86rem;font-weight:600}
+
+  /* ---------- scan ---------- */
+  .scan-grid{display:grid;gap:16px}
+  @media(min-width:820px){.scan-grid{grid-template-columns:1.25fr .9fr}}
+  .pupils{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+  .pupil{border:1.5px solid var(--line);background:var(--surface);border-radius:12px;padding:12px;text-align:left;cursor:pointer;color:var(--ink)}
+  .pupil:hover{border-color:var(--brand)}
+  .pupil .nm{font-weight:700;display:block;line-height:1.3}
+  .pupil .meta{font-size:.8rem;color:var(--ink2);display:block;margin-top:2px}
+  .pupil .st{margin-top:8px}
+  .badge{display:inline-block;border-radius:999px;padding:2px 10px;font-size:.76rem;font-weight:700}
+  .b-ok{background:var(--ok-bg);color:var(--ok)}
+  .b-warn{background:var(--warn-bg);color:var(--warn)}
+  .b-bad{background:var(--bad-bg);color:var(--bad)}
+  .b-none{background:var(--surface2);color:var(--ink2)}
+  .b-info{background:var(--info-bg);color:var(--brand-dark)}
+  @media (prefers-color-scheme: dark){ .b-info{color:var(--brand)} }
+  .feed{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;max-height:430px;overflow:auto}
+  .feed li{background:var(--surface2);border-radius:10px;padding:9px 12px;font-size:.92rem;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .feed .t{font-family:"IBM Plex Mono",monospace;font-weight:600;white-space:nowrap}
+  .flash{border-radius:var(--radius);padding:14px 16px;font-weight:700;margin-bottom:14px;display:none}
+  .flash.show{display:block}
+  .flash.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
+  .flash.warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
+  .flash.bad{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
+  .manual{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .manual input{flex:1 1 180px;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);color:var(--ink)}
+  .btn{border:none;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
+  @media (prefers-color-scheme: dark){ .btn{color:#0d1620} }
+  .btn.gold{background:var(--gold);color:#231a05}
+  .btn.ghost{background:var(--surface);color:var(--ink);border:1.5px solid var(--line)}
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+
+  /* ---------- rekap & tables ---------- */
+  .toolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-bottom:14px}
+  .toolbar label{font-size:.82rem;font-weight:700;color:var(--ink2);display:flex;flex-direction:column;gap:4px}
+  .toolbar select,.toolbar input{border:1.5px solid var(--line);border-radius:10px;padding:8px 10px;background:var(--surface);color:var(--ink)}
+  .subtabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+  .subtabs button{border:1.5px solid var(--line);background:var(--surface);color:var(--ink);border-radius:999px;padding:8px 18px;font-weight:700;cursor:pointer}
+  .subtabs button[aria-selected="true"]{background:var(--brand);color:#fff;border-color:var(--brand)}
+  @media (prefers-color-scheme: dark){ .subtabs button[aria-selected="true"]{color:#0d1620} }
+  table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+  th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line);font-size:.92rem;vertical-align:top}
+  th{background:var(--surface2);font-size:.8rem;letter-spacing:.03em}
+  tr:last-child td{border-bottom:none}
+  td.num,th.num{text-align:right;font-family:"IBM Plex Mono",monospace}
+  td.ctr,th.ctr{text-align:center}
+  .tablewrap{overflow-x:auto;border-radius:var(--radius)}
+  @media(max-width:640px){
+    .stack-table thead{display:none}
+    .stack-table,.stack-table tbody,.stack-table tr,.stack-table td{display:block;width:100%}
+    .stack-table tr{border-bottom:2px solid var(--line);padding:8px 0}
+    .stack-table td{border-bottom:none;padding:4px 12px}
+    .stack-table td::before{content:attr(data-l);font-weight:700;color:var(--ink2);font-size:.78rem;display:block}
+    td.num{text-align:left}
+  }
+  .pinbox{max-width:400px;margin:30px auto;text-align:center}
+  .pinbox input{width:100%;text-align:center;font-size:1.3rem;letter-spacing:.4em;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);color:var(--ink);padding:8px}
+  .err{color:var(--bad);font-weight:700;min-height:1.4em;margin:8px 0 0}
+
+  /* ---------- orang tua ---------- */
+  .today-grid{display:grid;gap:12px;margin:16px 0}
+  @media(min-width:640px){.today-grid{grid-template-columns:1fr 1fr}}
+  .big-status{border-radius:var(--radius);padding:18px;border:1.5px solid var(--line);background:var(--surface)}
+  .big-status .cap{font-size:.82rem;font-weight:700;color:var(--ink2);letter-spacing:.03em}
+  .big-status .val{font-size:1.35rem;font-weight:800;margin:4px 0 2px;line-height:1.25}
+  .big-status .jam{font-family:"IBM Plex Mono",monospace;font-size:1.1rem;font-weight:600}
+  .big-status.done{border-color:var(--ok);background:var(--ok-bg)}
+  .big-status.late{border-color:var(--warn);background:var(--warn-bg)}
+  .big-status.none{border-color:var(--bad);background:var(--bad-bg)}
+  .child-head{display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .avatar{width:54px;height:54px;border-radius:50%;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:1.15rem;flex:none}
+  @media (prefers-color-scheme: dark){ .avatar{color:#0d1620} }
+
+  /* ---------- kartu QR ---------- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px}
+  .idcard{background:var(--surface);border:1.5px solid var(--brand);border-radius:var(--radius);padding:16px;text-align:center}
+  .idcard .sch{font-size:.72rem;font-weight:700;color:var(--brand-dark);letter-spacing:.05em}
+  @media (prefers-color-scheme: dark){ .idcard .sch{color:var(--brand)} }
+  .idcard .nm{font-weight:800;margin-top:8px;line-height:1.3}
+  .idcard .meta{font-size:.84rem;color:var(--ink2)}
+  .idcard .qr{display:flex;justify-content:center;margin:12px 0 8px}
+  .idcard .qr img,.idcard .qr canvas{background:#fff;padding:6px;border-radius:8px}
+  .idcard .nis{font-family:"IBM Plex Mono",monospace;font-weight:600}
+  footer{margin-top:36px;color:var(--ink2);font-size:.86rem;border-top:1px solid var(--line);padding-top:14px}
+  .hidden{display:none !important}
+
+  /* ---------- mode scan terpisah ---------- */
+  .modes{display:grid;gap:10px;margin:0 0 16px}
+  @media(min-width:640px){.modes{grid-template-columns:repeat(2,1fr)}}
+  @media(min-width:1024px){.modes{grid-template-columns:repeat(4,1fr)}}
+  .mode{border:2px solid var(--line);background:var(--surface);color:var(--ink);border-radius:var(--radius);padding:14px 16px;text-align:left;cursor:pointer}
+  .mode .mt{font-weight:800;font-size:1.05rem;display:block;line-height:1.3}
+  .mode .md{font-size:.85rem;color:var(--ink2);display:block;margin-top:3px;line-height:1.4}
+  .mode .cek{display:none;font-weight:800}
+  .mode[aria-selected="true"]{border-color:var(--brand);background:var(--info-bg);box-shadow:inset 0 0 0 1px var(--brand)}
+  .mode[aria-selected="true"] .cek{display:inline}
+  .mode-sholat[aria-selected="true"]{border-color:var(--ok);background:var(--ok-bg);box-shadow:inset 0 0 0 1px var(--ok)}
+  .mode-pulang[aria-selected="true"]{border-color:var(--gold);background:var(--warn-bg);box-shadow:inset 0 0 0 1px var(--gold)}
+  .mode-halangan[aria-selected="true"]{border-color:var(--brand-dark);background:var(--surface2);box-shadow:inset 0 0 0 1.5px var(--brand-dark)}
+  .mode-banner{border-radius:var(--radius);padding:12px 16px;font-weight:700;margin-bottom:14px;border:1.5px solid var(--brand);background:var(--info-bg)}
+  .halangan-box{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  .btn.small{min-height:38px;padding:6px 12px;font-size:.88rem}
+  .today-grid3{display:grid;gap:12px;margin:16px 0}
+  @media(min-width:860px){.today-grid3{grid-template-columns:1fr 1fr 1fr}}
+  @media(min-width:640px) and (max-width:859px){.today-grid3{grid-template-columns:1fr 1fr}}
+
+  /* ---------- pemindai kamera ---------- */
+  .cam-card{margin-bottom:16px}
+  .cam-wrap{position:relative;background:#0b1116;border-radius:12px;overflow:hidden;max-width:560px;margin:0 auto}
+  .cam-wrap video{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#0b1116}
+  .cam-frame{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+  .cam-frame::before{content:"";width:min(62%,260px);aspect-ratio:1;border:3px solid rgba(255,255,255,.9);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
+  .cam-idle{padding:28px 16px;text-align:center;color:#cfe0ee}
+  .cam-status{margin:12px 0 0;font-weight:600}
+  .cam-status.err{color:var(--bad)}
+  .cam-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
+  .idcard .dl-one{margin-top:10px;width:100%}
+
+  /* ---------- cetak kartu ---------- */
+  @media print{
+    header.top, nav.tabs, footer, .no-print{display:none !important}
+    body{background:#fff}
+    .wrap{max-width:none;padding:0}
+    section.view{display:none !important}
+    section.view#view-kartu{display:block !important}
+    .cards{grid-template-columns:repeat(2,1fr);gap:10px}
+    .idcard{border-color:#43617d;color:#000;break-inside:avoid;page-break-inside:avoid}
+    .idcard .meta{color:#333}
+  }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="top-in">
+    <div class="school">SMP NEGERI 2 KEBONAGUNG &middot; KABUPATEN PACITAN</div>
+    <h1>Absensi Siswa dengan QR Kartu Siswa</h1>
+    <p class="sub">Satu QR yang sama untuk tiga absensi yang terpisah: datang, sholat dhuhur, dan pulang. Petugas memilih dulu jenis absensinya, baru memindai — jadi tidak ada lagi scan pertama / scan kedua. Siswa yang sudah sholat memindai kartunya saat keluar masjid; siswa yang berhalangan dipindai kartunya oleh guru piket yang berkeliling, sehingga ikut terekap sebagai Berhalangan. Rekap tersusun otomatis per hari, per minggu, dan per bulan.</p>
+    <div class="clockbar">
+      <span class="clock"><span id="tglLabel">—</span> &middot; <b id="jamLabel">--:--:--</b> WIB</span>
+      <span class="chip-rule" id="chipJadwal">Memuat jadwal&hellip;</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <nav class="tabs" role="tablist" aria-label="Menu utama">
+    <button role="tab" aria-selected="true" data-view="scan">📷 Scan Absensi</button>
+    <button role="tab" aria-selected="false" data-view="guru">📊 Rekap Guru</button>
+    <button role="tab" aria-selected="false" data-view="ortu">👨‍👩‍👧 Orang Tua</button>
+    <button role="tab" aria-selected="false" data-view="kartu">🪪 Kartu &amp; QR</button>
+  </nav>
+
+  <!-- ============ SCAN ============ -->
+  <section class="view active" id="view-scan">
+    <h2>Scan Absensi — Pilih Jenisnya Dulu</h2>
+    <p class="lead">Absensi datang, sholat dhuhur, dan pulang sekarang <b>terpisah</b>, ditambah satu mode khusus <b>Scan Berhalangan</b>. Petugas di gerbang memilih mode <b>Datang</b>; siswa yang sudah sholat memindai kartunya saat keluar masjid dengan mode <b>Sholat Dhuhur</b>; guru piket yang tidak memimpin sholat berkeliling lingkungan sekolah dan memindai kartu siswa yang tidak sholat karena berhalangan dengan mode <b>Scan Berhalangan</b>; petugas pulang memilih mode <b>Pulang</b>. Keempatnya memakai QR yang sama di Kartu Siswa. Scan pada satu mode tidak memengaruhi mode lain, dan scan ganda pada mode yang sama di hari yang sama ditolak. Gunakan <b>pemindai kamera</b> di bawah untuk memindai Kartu Siswa sungguhan (unduh/cetak kartunya di tab <b>Kartu &amp; QR</b>), atau ketuk kartu nama siswa / ketik NIS sebagai cara cadangan.</p>
+
+    <div class="modes" role="tablist" aria-label="Pilih jenis absensi">
+      <button type="button" class="mode mode-datang" role="tab" aria-selected="true" data-mode="datang">
+        <span class="mt"><span class="cek">✓ TERPILIH — </span>1 · Absen Datang</span>
+        <span class="md">Di gerbang, pagi hari. Lewat pukul 07.00 tercatat Terlambat.</span>
+      </button>
+      <button type="button" class="mode mode-sholat" role="tab" aria-selected="false" data-mode="sholat">
+        <span class="mt"><span class="cek">✓ TERPILIH — </span>2 · Absen Sholat Dhuhur</span>
+        <span class="md">Di masjid sekolah: siswa memindai kartunya saat keluar masjid/mushola = sudah sholat.</span>
+      </button>
+      <button type="button" class="mode mode-pulang" role="tab" aria-selected="false" data-mode="pulang">
+        <span class="mt"><span class="cek">✓ TERPILIH — </span>3 · Absen Pulang</span>
+        <span class="md">Di gerbang, mulai pukul pulang hari itu (Senin 14.40, Selasa&ndash;Kamis 14.00, Jumat 11.00). Terpisah dari absen datang.</span>
+      </button>
+      <button type="button" class="mode mode-halangan" role="tab" aria-selected="false" data-mode="halangan">
+        <span class="mt"><span class="cek">✓ TERPILIH — </span>4 · Scan Berhalangan</span>
+        <span class="md">Dipakai guru piket yang berkeliling sekolah: pindai kartu siswa yang tidak sholat karena berhalangan (haid / sakit / izin) → terekap Berhalangan.</span>
+      </button>
+    </div>
+    <div class="mode-banner" id="modeBanner" role="status"></div>
+
+    <div class="card cam-card">
+      <h3 style="margin-top:0">📷 Pemindai Kamera — Scan QR Kartu Siswa</h3>
+      <p class="lead" style="margin-bottom:12px">Ketuk <b>Nyalakan Kamera</b>, izinkan akses kamera bila HP meminta, lalu arahkan QR pada Kartu Siswa ke dalam kotak pemindai. Hasil scan langsung tercatat sesuai <b>mode yang dipilih di atas</b>. Kartunya dapat diunduh atau dicetak dari tab <b>Kartu &amp; QR</b> — cetak satu kartu, lalu pindai dari HP ini atau tampilkan kartu di layar perangkat lain dan pindai dari sini.</p>
+      <div class="cam-wrap">
+        <div class="cam-idle" id="camIdle">Kamera belum menyala.<br />Pastikan halaman dibuka lewat koneksi aman (https) dan izin kamera diberikan.</div>
+        <video id="camVideo" playsinline muted class="hidden"></video>
+        <div class="cam-frame hidden" id="camFrame"></div>
+      </div>
+      <canvas id="camCanvas" class="hidden" width="640" height="480"></canvas>
+      <div class="cam-actions">
+        <button type="button" class="btn" id="camStartBtn">📷 Nyalakan Kamera</button>
+        <button type="button" class="btn ghost hidden" id="camStopBtn">Matikan Kamera</button>
+      </div>
+      <p class="cam-status" id="camStatus" role="status">Kamera mati. Cara cadangan tetap tersedia: ketuk nama siswa atau ketik NIS di bawah.</p>
+    </div>
+
+    <div class="flash" id="flash" role="status"></div>
+    <div class="stats" id="scanStats"></div>
+    <div class="scan-grid">
+      <div class="card">
+        <h3 style="margin-top:0" id="scanCardTitle">Simulasi Scan — Ketuk Nama Siswa</h3>
+        <div class="pupils" id="pupilGrid"></div>
+        <div class="manual">
+          <input id="manualNis" inputmode="numeric" placeholder="atau ketik NIS, mis. 4572" aria-label="Ketik NIS siswa" />
+          <button class="btn" id="manualBtn">Scan NIS Ini</button>
+        </div>
+        <div class="halangan-box">
+          <h3 style="margin:0 0 6px">Alur Berhalangan — Juga dengan Scan QR</h3>
+          <p class="lead" style="margin:0">Berhalangan <b>tidak lagi ditandai manual</b>. Alurnya: siswa yang sudah sholat memindai kartunya saat keluar masjid/mushola (mode <b>Sholat Dhuhur</b>). Guru piket yang tidak memimpin sholat berkeliling lingkungan sekolah; bila menemukan siswa yang tidak sholat dan alasannya berhalangan — misalnya haid — guru piket <b>memindai kartu siswa itu</b> dengan mode <b>Scan Berhalangan</b>, sehingga siswa tersebut terekap <b>Berhalangan</b>, bukan Tidak Sholat. Coba di sini: pilih mode <b>4 · Scan Berhalangan</b> di atas, lalu ketuk nama siswa atau ketik NIS-nya.</p>
+        </div>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">Aktivitas Scan Terakhir</h3>
+        <ul class="feed" id="feed"></ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ GURU ============ -->
+  <section class="view" id="view-guru">
+    <div id="pinGate" class="card pinbox">
+      <h2>Halaman Guru</h2>
+      <p class="lead" style="margin-left:auto;margin-right:auto">Masukkan PIN untuk membuka rekap absensi dan pengaturan jadwal.</p>
+      <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" aria-label="PIN guru" />
+      <p class="err" id="pinErr"></p>
+      <button class="btn" id="pinBtn" style="width:100%">Buka Rekap</button>
+    </div>
+    <div id="guruPanel" class="hidden">
+      <h2>Rekap Absensi</h2>
+      <p class="lead">Data 402 siswa kelas 7A&ndash;7D, 8A&ndash;8E, dan 9A&ndash;9D (TP 2026/2027). Rekap Datang &amp; Pulang ada di tab Harian, Mingguan, dan Bulanan; rekap Sholat Dhuhur ada di tab tersendiri; aturan jam (masuk, batas terlambat, pulang per hari) dapat diubah di tab Pengaturan. Tombol unduh menghasilkan file CSV yang bisa dibuka dan diolah di Excel atau Google Sheets, sama seperti rekap spreadsheet.</p>
+
+      <div class="card" style="margin-bottom:18px">
+        <h3 style="margin-top:0">Tandai Sakit / Izin — oleh Wali Kelas</h3>
+        <p class="lead" style="margin-bottom:12px">Untuk siswa yang tidak masuk sekolah karena <b>sakit</b> (ada surat / izin orang tua) atau <b>izin</b> keperluan lain, misalnya kepentingan keluarga. Pilih tanggal dan siswanya, tentukan jenis dan keterangannya, lalu ketuk <b>Tandai</b>. Siswa yang ditandai <b>tidak dihitung Alpa</b> pada Rekap Harian, Mingguan (kode S / I), dan Bulanan hari itu, dan status beserta keterangannya tampil juga di halaman Orang Tua.</p>
+        <div class="flash" id="absenFlash" role="status"></div>
+        <div class="toolbar" style="margin-bottom:8px">
+          <label>Tanggal <input type="date" id="tglAbsen" /></label>
+          <label>Siswa
+            <select id="absenSiswa" aria-label="Pilih siswa yang ditandai sakit atau izin"></select>
+          </label>
+          <label>Jenis
+            <select id="absenJenis">
+              <option value="sakit">Sakit</option>
+              <option value="izin">Izin</option>
+            </select>
+          </label>
+          <label>Keterangan
+            <select id="absenAlasan">
+              <option value="Sakit">Sakit</option>
+              <option value="Kepentingan Keluarga">Kepentingan Keluarga</option>
+              <option value="Lainnya">Lainnya</option>
+            </select>
+          </label>
+        </div>
+        <div class="manual" style="margin-top:0">
+          <input id="absenCatatan" placeholder="Catatan bebas — wajib diisi bila keterangan Lainnya, mis. mengantar orang tua berobat" aria-label="Catatan bebas keterangan sakit atau izin" />
+          <button class="btn gold" id="absenBtn">Tandai Sakit / Izin</button>
+        </div>
+        <div id="absenList"></div>
+      </div>
+
+      <div class="subtabs" role="tablist" aria-label="Jenis rekap">
+        <button role="tab" aria-selected="true" data-rekap="harian">Harian</button>
+        <button role="tab" aria-selected="false" data-rekap="mingguan">Mingguan</button>
+        <button role="tab" aria-selected="false" data-rekap="bulanan">Bulanan</button>
+        <button role="tab" aria-selected="false" data-rekap="sholat">🕌 Sholat Dhuhur</button>
+      </div>
+
+      <div id="rekap-harian">
+        <div class="toolbar">
+          <label>Tanggal <input type="date" id="tglHarian" /></label>
+          <label>Kelas
+            <select id="kelasHarian"><option value="">Semua kelas</option><option>7A</option><option>7B</option><option>7C</option><option>7D</option><option>8A</option><option>8B</option><option>8C</option><option>8D</option><option>8E</option><option>9A</option><option>9B</option><option>9C</option><option>9D</option></select>
+          </label>
+          <button class="btn gold" id="dlHarian">⬇ Unduh CSV Harian</button>
+        </div>
+        <div class="stats" id="harianStats"></div>
+        <div class="tablewrap"><table class="stack-table">
+          <thead><tr><th>Nama</th><th>Kelas</th><th>Datang</th><th>Status Datang</th><th>Sholat Dhuhur</th><th>Pulang</th><th>Keterangan</th></tr></thead>
+          <tbody id="tbodyHarian"></tbody>
+        </table></div>
+      </div>
+
+      <div id="rekap-mingguan" class="hidden">
+        <div class="toolbar">
+          <label>Minggu (pilih hari Senin)
+            <select id="mingguSel"></select>
+          </label>
+          <label>Kelas
+            <select id="kelasMingguan"><option value="">Semua kelas</option><option>7A</option><option>7B</option><option>7C</option><option>7D</option><option>8A</option><option>8B</option><option>8C</option><option>8D</option><option>8E</option><option>9A</option><option>9B</option><option>9C</option><option>9D</option></select>
+          </label>
+          <button class="btn gold" id="dlMingguan">⬇ Unduh CSV Mingguan</button>
+        </div>
+        <div class="tablewrap"><table>
+          <thead id="theadMingguan"></thead>
+          <tbody id="tbodyMingguan"></tbody>
+        </table></div>
+        <p class="lead" style="margin-top:10px">Kode: <b>H</b> = hadir tepat waktu, <b>T</b> = terlambat, <b>S</b> = sakit, <b>I</b> = izin, <b>A</b> = tidak hadir (alpa, tanpa keterangan), <b>–</b> = hari libur / belum berjalan.</p>
+      </div>
+
+      <div id="rekap-bulanan" class="hidden">
+        <div class="toolbar">
+          <label>Bulan
+            <select id="bulanSel"></select>
+          </label>
+          <label>Kelas
+            <select id="kelasBulanan"><option value="">Semua kelas</option><option>7A</option><option>7B</option><option>7C</option><option>7D</option><option>8A</option><option>8B</option><option>8C</option><option>8D</option><option>8E</option><option>9A</option><option>9B</option><option>9C</option><option>9D</option></select>
+          </label>
+          <button class="btn gold" id="dlBulanan">⬇ Unduh CSV Bulanan</button>
+        </div>
+        <div class="tablewrap"><table class="stack-table">
+          <thead><tr><th>Nama</th><th>Kelas</th><th class="num">Hadir</th><th class="num">Terlambat</th><th class="num">Sakit</th><th class="num">Izin</th><th class="num">Tidak Hadir (Alpa)</th><th class="num">Kehadiran</th></tr></thead>
+          <tbody id="tbodyBulanan"></tbody>
+        </table></div>
+      </div>
+
+      <div id="rekap-sholat" class="hidden">
+        <h3 style="margin-top:4px">Rekap Sholat Dhuhur — Harian</h3>
+        <p class="lead">Dari sini terlihat siapa yang <b>sudah sholat</b> (scan QR saat keluar masjid), siapa yang <b>berhalangan</b> (kartunya di-scan guru piket yang berkeliling, misalnya karena haid / sakit / izin), siapa yang <b>belum sholat</b>, dan siapa yang <b>tidak sholat</b>. Siswa yang hadir tetapi belum scan sholat dan belum di-scan berhalangan berstatus <b>Belum Sholat</b> — statusnya baru berubah otomatis menjadi <b>Tidak Sholat</b> bila sampai waktunya scan Pulang (pukul pulang hari itu) ia tetap belum ter-scan sholat di masjid maupun berhalangan. Berhalangan dicatat lewat scan, bukan tanda manual; tombol <b>Batalkan Berhalangan</b> hanya untuk membetulkan bila ada scan berhalangan yang keliru.</p>
+        <div class="toolbar">
+          <label>Tanggal <input type="date" id="tglSholat" /></label>
+          <label>Kelas
+            <select id="kelasSholat"><option value="">Semua kelas</option><option>7A</option><option>7B</option><option>7C</option><option>7D</option><option>8A</option><option>8B</option><option>8C</option><option>8D</option><option>8E</option><option>9A</option><option>9B</option><option>9C</option><option>9D</option></select>
+          </label>
+          <button class="btn gold" id="dlSholat">⬇ Unduh CSV Sholat Harian</button>
+        </div>
+        <div class="stats" id="sholatStats"></div>
+        <div class="tablewrap"><table class="stack-table">
+          <thead><tr><th>Nama</th><th>Kelas</th><th>Status Sholat Dhuhur</th><th>Jam Scan</th><th>Keterangan</th><th>Tindakan Guru</th></tr></thead>
+          <tbody id="tbodySholat"></tbody>
+        </table></div>
+
+        <h3>Ringkasan Sholat Dhuhur — Bulanan</h3>
+        <div class="toolbar">
+          <label>Bulan
+            <select id="bulanSholatSel"></select>
+          </label>
+          <label>Kelas
+            <select id="kelasSholatBulan"><option value="">Semua kelas</option><option>7A</option><option>7B</option><option>7C</option><option>7D</option><option>8A</option><option>8B</option><option>8C</option><option>8D</option><option>8E</option><option>9A</option><option>9B</option><option>9C</option><option>9D</option></select>
+          </label>
+          <button class="btn gold" id="dlSholatBulan">⬇ Unduh CSV Sholat Bulanan</button>
+        </div>
+        <div class="tablewrap"><table class="stack-table">
+          <thead><tr><th>Nama</th><th>Kelas</th><th class="num">Sudah Sholat</th><th class="num">Berhalangan</th><th class="num">Tidak Sholat</th><th class="num">Tidak Hadir di Sekolah</th><th class="num">% Sholat</th></tr></thead>
+          <tbody id="tbodySholatBulan"></tbody>
+        </table></div>
+        <p class="lead" style="margin-top:10px">% Sholat dihitung dari hari siswa hadir di sekolah: Sudah Sholat ÷ (Sudah Sholat + Berhalangan + Tidak Sholat). Hari tidak hadir di sekolah tidak ikut dihitung.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ORANG TUA ============ -->
+  <section class="view" id="view-ortu">
+    <h2>Pantau Kehadiran Anak</h2>
+    <p class="lead">Bapak/Ibu dapat melihat catatan putra-putrinya di sini: kapan tiba di sekolah, apakah sudah sholat dhuhur di sekolah atau berhalangan, kapan pulang, dan riwayatnya minggu ini serta bulan ini.</p>
+    <div class="note">Data yang tampil di sini adalah hasil scan QR anak Bapak/Ibu di gerbang sekolah. Halaman ini hanya untuk melihat; catatan absensi tidak dapat diubah dari sini.</div>
+    <div class="card">
+      <h3 style="margin-top:0">Cari Data Anak</h3>
+      <div class="manual" style="margin-top:0">
+        <input id="ortuNis" inputmode="numeric" placeholder="Masukkan NIS anak, mis. 4572" aria-label="NIS anak" />
+        <button class="btn" id="ortuCariBtn">Cari</button>
+      </div>
+      <div class="manual">
+        <select id="ortuSelect" aria-label="Pilih nama siswa" style="flex:1 1 220px;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);color:var(--ink)">
+          <option value="">— atau pilih nama siswa —</option>
+        </select>
+        <button class="btn ghost" id="ortuPilihBtn">Lihat Data</button>
+      </div>
+      <p class="err" id="ortuErr"></p>
+    </div>
+    <div id="ortuHasil" class="hidden" style="margin-top:18px"></div>
+  </section>
+
+  <!-- ============ KARTU QR ============ -->
+  <section class="view" id="view-kartu">
+    <h2>Kartu Siswa &amp; Kode QR — Unduh &amp; Cetak di Sini</h2>
+    <p class="lead">Di sinilah kartu per siswa berada: <b>402 kartu siswa</b>, satu kartu untuk tiap siswa. QR pada kartu berisi kode yang sama dengan Kartu Siswa yang sudah dicetak (format NIS-NAMA), sehingga kartu yang dicetak dari sini dapat dipindai seperti kartu aslinya. QR yang sama dipakai untuk keempat absensi: datang di gerbang, sholat dhuhur di masjid, scan berhalangan oleh guru piket, dan pulang di gerbang — yang membedakan catatannya adalah mode yang dipilih petugas saat memindai, bukan QR-nya.</p>
+    <div class="note no-print"><b>Cara mencoba scan dari HP lain:</b> (1) ketuk <b>⬇ Unduh Kartu Ini (PNG)</b> pada satu kartu di bawah — gambar kartu tersimpan di HP dan bisa dibuka di perangkat lain atau dikirim ke HP kedua; atau pilih kelas di atas lalu ketuk <b>⬇ Unduh Kartu Kelas Ini (1 PNG)</b> untuk satu lembar berisi kartu-kartu kelas itu sekaligus; atau cetak lewat menu <b>Cetak</b> pada peramban/HP — halaman ini sudah diatur agar yang tercetak hanya kartu-kartunya, 2 kartu per baris. (2) Buka halaman <b>Scan Absensi</b>, pilih mode, ketuk <b>Nyalakan Kamera</b>, lalu arahkan kamera ke QR pada kartu yang tercetak / tampil di perangkat lain.</div>
+    <div class="toolbar no-print">
+      <button type="button" class="btn gold" id="dlAllCardsBtn">⬇ Unduh Kartu Kelas Ini (1 PNG)</button>
+    </div>
+    <p class="cam-status" id="cardDlStatus" role="status"></p>
+    <div class="cards" id="cardGrid"></div>
+  </section>
+
+  <footer>
+    Absensi QR — SMP Negeri 2 Kebonagung. Data tersimpan permanen dan tersinkron ke semua perangkat guru. Bila offline, catatan tersimpan dulu di HP lalu terkirim otomatis saat internet kembali.
+  </footer>
+</div>
+<script>
+"use strict";
+/* ================= DATA SISWA ================= */
+var STUDENTS = (window.ROSTER || []).slice(); /* daftar siswa asli, dimuat dari roster.js */
+/* ============ ATURAN JADWAL — dapat diubah di tab Pengaturan (tersimpan di Firestore config/jadwal) ============
+   Jam masuk 07.00 — RESMI (dikonfirmasi Mas Budi).
+   Batas terlambat: scan Datang lewat 07.00 = Terlambat — RESMI (dikonfirmasi Mas Budi 13 Nov 10.31 WIB).
+   Jam pulang per hari (1=Senin .. 5=Jumat; 0=Minggu dan 6=Sabtu libur):
+   Senin 14.40 (13 Nov 10.28), Selasa-Kamis 14.00 (13 Nov 10.28), Jumat 11.00 (13 Nov 10.29).
+   Sabtu libur — tidak masuk (dikonfirmasi Mas Budi 13 Nov 19.01 WIB).
+   Perubahan aturan hanya berlaku untuk scan sesudah perubahan; catatan yang sudah tersimpan
+   tidak diubah (status Terlambat/Tepat dicatat bersama tiap scan Datang). */
+var JADWAL_AWAL = {
+  jamMasuk: "07:00",
+  batasTerlambat: "07:00",
+  jamPulang: {1:"14:40", 2:"14:00", 3:"14:00", 4:"14:00", 5:"11:00"}
+};
+var JADWAL = JSON.parse(JSON.stringify(JADWAL_AWAL));
+var JAM_SHOLAT   = "12:00";   /* acuan jam sholat dhuhur di masjid sekolah (hanya tampilan bila jam scan tidak ada) */
+function jamPulangFor(d){ var g=d.getDay(); if (g===0 || g===6) return null; return JADWAL.jamPulang[g] || null; }
+function jamPulangHariIni(){ return jamPulangFor(new Date()); }
+function teksJadwal(){
+  var jp = jamPulangHariIni();
+  return "Datang s.d. " + JADWAL.batasTerlambat + " tepat waktu · Sholat Dhuhur di masjid sekolah · Pulang hari ini " + (jp || "libur");
+}
+
+function pad(n){ return (n<10?"0":"")+n; }
+function keyOf(d){ return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate()); }
+function parseKey(k){ var p=k.split("-"); return new Date(+p[0], +p[1]-1, +p[2]); }
+function isSchoolDay(d){ var g=d.getDay(); return g>=1 && g<=5; }
+function fmtTgl(d){ return d.toLocaleDateString("id-ID",{weekday:"long", day:"numeric", month:"long", year:"numeric"}); }
+function fmtTglShort(d){ return d.toLocaleDateString("id-ID",{weekday:"short", day:"numeric", month:"short"}); }
+function nowTime(){ var n=new Date(); return pad(n.getHours())+":"+pad(n.getMinutes()); }
+function studentByNis(nis){ for (var i=0;i<STUDENTS.length;i++) if (STUDENTS[i].nis===nis) return STUDENTS[i]; return null; }
+function escHtml(t){ return String(t == null ? "" : t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+/* Penandaan Sakit/Izin oleh wali kelas: rec.absen = {jenis:"sakit"|"izin", keterangan:"..."} — siswa tidak dihitung Alpa. */
+function labelAbsen(abs){ return abs.jenis === "sakit" ? "Sakit" : "Izin"; }
+function badgeAbsen(abs){
+  return abs.jenis === "sakit"
+    ? '<span class="badge b-warn">Sakit · '+escHtml(abs.keterangan)+'</span>'
+    : '<span class="badge b-info">Izin · '+escHtml(abs.keterangan)+'</span>';
+}
+
+/* Rekaman: records[tanggal][nis] = {masuk:"HH:MM", sholat:"sudah"|"berhalangan", sholatJam:"HH:MM", halanganJam:"HH:MM", pulang:"HH:MM", absen:{jenis:"sakit"|"izin", keterangan:"..."}} atau {alpa:true}
+   halanganJam = jam scan Berhalangan oleh guru piket (mode Scan Berhalangan).
+   Ketiga absensi terpisah: masuk, sholat, dan pulang dicatat sendiri-sendiri lewat mode scan yang dipilih petugas. */
+var records = {};
+var feed = []; /* {teks, jam, jenis} terbaru di depan */
+
+/* ================= VERSI SEBENAR: OFFLINE + SINKRONISASI MULTI-GURU =================
+   Prinsip:
+   1. Setiap catatan (scan 4 mode + penandaan Sakit/Izin) LANGSUNG ditulis ke IndexedDB
+      di HP ini — tahan tutup halaman, tutup Chrome, dan HP dimatikan. Bukan in-memory.
+   2. Catatan yang sama diantrekan ke Firestore (koleksi absensi_siswa_qr). Begitu online,
+      antrean terkirim otomatis; bila offline, antrean menunggu di HP.
+   3. Satu dokumen Firestore per siswa per hari: id = "YYYY-MM-DD_NIS".
+      Tiap mode menulis medannya sendiri (masuk / sholat / pulang / absen) dengan
+      set(..., {merge:true}), sehingga dua guru yang memindai bersamaan TIDAK PERNAH
+      membuat baris ganda — tulisan terakhir pada medan yang sama wins, dan nilainya
+      sama (jam scan yang sama), jadi hasilnya satu catatan.
+   4. Rekap Guru membaca dari Firestore (listener live bulan berjalan + ambil rentang
+      untuk tanggal/bulan lain), sehingga scan guru mana pun muncul di semua HP.
+   5. Aturan jadwal tinggal di Firestore config/jadwal + cache lokal; semua HP guru
+      mengikuti aturan yang sama. Perubahan aturan hanya berlaku untuk scan sesudah
+      perubahan (status Terlambat/Tepat dicatat bersama tiap scan Datang).
+   Firestore TIDAK AKTIF sebelum aturan di firestore-rules.txt ditempel & diterbitkan
+   oleh Mas Budi di Firebase Console — sebelum itu aplikasi tetap jalan penuh secara
+   lokal (scan + rekap dari data HP ini) dan antrean terkirim begitu aturan aktif. */
+var KELAS_LIST = ["7A","7B","7C","7D","8A","8B","8C","8D","8E","9A","9B","9C","9D"];
+var FB_DB = null;
+var IDB_DB = null;
+var OUTBOX = {}; /* docId -> {docId, fields, hapus} : cermin antrean di IndexedDB */
+var RENTANG_DIIAMBIL = {}; /* "awal|akhir" -> timestamp pengambilan terakhir */
+var PERANGKAT_ID = (function(){
+  try {
+    var v = localStorage.getItem("perangkat-id");
+    if (!v){ v = "hp-" + Math.random().toString(36).slice(2,10); localStorage.setItem("perangkat-id", v); }
+    return v;
+  } catch(e){ return "hp-" + Math.random().toString(36).slice(2,10); }
+})();
+
+function guruTerbuka(){
+  var p = document.getElementById("guruPanel");
+  return p && !p.classList.contains("hidden");
+}
+function adaDataTanggal(dateKey){
+  if (dateKey === keyOf(new Date())) return true;
+  return !!(records[dateKey] && Object.keys(records[dateKey]).length);
+}
+
+/* ---------- IndexedDB (cadangan localStorage bila IDB tidak tersedia) ---------- */
+function bukaIDB(){
+  return new Promise(function(resolve){
+    if (!("indexedDB" in window)){ resolve(null); return; }
+    var req;
+    try { req = indexedDB.open("absensi-qr-real", 1); }
+    catch(e){ resolve(null); return; }
+    req.onupgradeneeded = function(){
+      var db = req.result;
+      if (!db.objectStoreNames.contains("catatan")) db.createObjectStore("catatan", {keyPath:"id"});
+      if (!db.objectStoreNames.contains("antrean")) db.createObjectStore("antrean", {keyPath:"docId"});
+      if (!db.objectStoreNames.contains("meta")) db.createObjectStore("meta", {keyPath:"kunci"});
+    };
+    req.onsuccess = function(){ IDB_DB = req.result; resolve(IDB_DB); };
+    req.onerror = function(){ resolve(null); };
+  });
+}
+function kunciNilai(store, val){
+  if (val.id !== undefined) return val.id;
+  if (val.docId !== undefined) return val.docId;
+  return val.kunci;
+}
+function idbSimpan(store, val){
+  var key = kunciNilai(store, val);
+  if (IDB_DB){
+    return new Promise(function(res){
+      try {
+        var tx = IDB_DB.transaction(store, "readwrite");
+        tx.objectStore(store).put(val);
+        tx.oncomplete = function(){ res(); };
+        tx.onerror = function(){ res(); };
+      } catch(e){ res(); }
+    });
+  }
+  try { localStorage.setItem("idb-"+store+"-"+key, JSON.stringify(val)); } catch(e){}
+  return Promise.resolve();
+}
+function idbAmbil(store, key){
+  if (IDB_DB){
+    return new Promise(function(res){
+      try {
+        var tx = IDB_DB.transaction(store, "readonly");
+        var rq = tx.objectStore(store).get(key);
+        rq.onsuccess = function(){ res(rq.result || null); };
+        rq.onerror = function(){ res(null); };
+      } catch(e){ res(null); }
+    });
+  }
+  try {
+    var v = localStorage.getItem("idb-"+store+"-"+key);
+    return Promise.resolve(v ? JSON.parse(v) : null);
+  } catch(e){ return Promise.resolve(null); }
+}
+function idbSemua(store){
+  if (IDB_DB){
+    return new Promise(function(res){
+      try {
+        var tx = IDB_DB.transaction(store, "readonly");
+        var rq = tx.objectStore(store).getAll();
+        rq.onsuccess = function(){ res(rq.result || []); };
+        rq.onerror = function(){ res([]); };
+      } catch(e){ res([]); }
+    });
+  }
+  var out = [], awalan = "idb-"+store+"-";
+  try {
+    for (var i=0;i<localStorage.length;i++){
+      var k = localStorage.key(i);
+      if (k && k.indexOf(awalan) === 0){ try { out.push(JSON.parse(localStorage.getItem(k))); } catch(e){} }
+    }
+  } catch(e){}
+  return Promise.resolve(out);
+}
+function idbHapus(store, key){
+  if (IDB_DB){
+    return new Promise(function(res){
+      try {
+        var tx = IDB_DB.transaction(store, "readwrite");
+        tx.objectStore(store).delete(key);
+        tx.oncomplete = function(){ res(); };
+        tx.onerror = function(){ res(); };
+      } catch(e){ res(); }
+    });
+  }
+  try { localStorage.removeItem("idb-"+store+"-"+key); } catch(e){}
+  return Promise.resolve();
+}
+function simpanCatatanLokal(dateKey, nis, rec){
+  return idbSimpan("catatan", {id: dateKey+"_"+nis, tanggal: dateKey, nis: nis, rec: rec});
+}
+function hapusCatatanLokal(dateKey, nis){
+  return idbHapus("catatan", dateKey+"_"+nis);
+}
+
+/* ---------- Firebase ---------- */
+function initFirebase(){
+  try {
+    if (typeof firebase === "undefined") return;
+    if (!firebase.apps || firebase.apps.length === 0){
+      firebase.initializeApp({
+        apiKey: "AIzaSyCRJo9Xou0X9K3ZGlvmArtUOod9ohR4lQk",
+        authDomain: "database-mpi-spendaka.firebaseapp.com",
+        projectId: "database-mpi-spendaka",
+        storageBucket: "database-mpi-spendaka.firebasestorage.app",
+        messagingSenderId: "909550540115",
+        appId: "1:909550540115:web:efcbb3efc2d138306bfda6"
+      });
+    }
+    FB_DB = firebase.firestore();
+  } catch(e){ FB_DB = null; }
+}
+
+/* ---------- Antrean + kirim ke Firestore ---------- */
+function perbaruiBadgeSinkron(){
+  var n = Object.keys(OUTBOX).length;
+  var teks = !navigator.onLine
+    ? "Offline — catatan tersimpan di HP ini (" + n + " belum terkirim). Akan terkirim otomatis saat internet kembali."
+    : n > 0
+      ? n + " catatan belum terkirim — sedang mengirim…"
+      : "Semua catatan sudah terkirim dan tersinkron.";
+  ["syncStatus","syncStatusGuru"].forEach(function(id){
+    var el = document.getElementById(id);
+    if (el) el.textContent = teks;
+  });
+}
+function antreFirestore(docId, fields, hapus){
+  OUTBOX[docId] = {docId: docId, fields: fields, hapus: hapus || []};
+  idbSimpan("antrean", OUTBOX[docId]);
+  perbaruiBadgeSinkron();
+  if (FB_DB && navigator.onLine) kirimAntrean();
+}
+function kirimAntrean(){
+  if (!FB_DB || !navigator.onLine) return Promise.resolve();
+  var ids = Object.keys(OUTBOX);
+  if (!ids.length){ perbaruiBadgeSinkron(); return Promise.resolve(); }
+  var rantai = Promise.resolve();
+  ids.forEach(function(docId){
+    rantai = rantai.then(function(){
+      var e = OUTBOX[docId];
+      if (!e) return;
+      var ref = FB_DB.collection("absensi_siswa_qr").doc(docId);
+      var tugas = Promise.resolve();
+      if (e.fields && Object.keys(e.fields).length){
+        var f = {};
+        Object.keys(e.fields).forEach(function(k){ f[k] = e.fields[k]; });
+        f.updatedAt = firebase.firestore.FieldValue.serverTimestamp();
+        f.perangkat = PERANGKAT_ID;
+        tugas = tugas.then(function(){ return ref.set(f, {merge:true}); });
+      }
+      if (e.hapus && e.hapus.length){
+        var del = {};
+        e.hapus.forEach(function(m){ del[m] = firebase.firestore.FieldValue.delete(); });
+        tugas = tugas.then(function(){ return ref.update(del); });
+      }
+      return tugas.then(function(){
+        delete OUTBOX[docId];
+        return idbHapus("antrean", docId);
+      }).catch(function(){ /* biarkan di antrean; coba lagi saat online berikutnya */ });
+    });
+  });
+  return rantai.then(function(){ perbaruiBadgeSinkron(); });
+}
+/* Dipanggil setiap kali sebuah catatan berubah di HP ini (scan / tandai / batalkan).
+   `hapus` = daftar medan yang sengaja dihapus oleh aksi ini — HANYA medan itu yang
+   dihapus dari Firestore, supaya catatan guru lain tidak ikut terhapus. */
+function catatanBerubah(dateKey, nis, rec, mode, hapus){
+  var s = studentByNis(nis);
+  if (!rec || Object.keys(rec).length === 0){
+    if (records[dateKey]) delete records[dateKey][nis];
+    hapusCatatanLokal(dateKey, nis);
+  } else {
+    simpanCatatanLokal(dateKey, nis, rec);
+  }
+  if (!s){ perbaruiBadgeSinkron(); return; }
+  var docId = dateKey + "_" + nis;
+  var fields = {tanggal: dateKey, nis: nis, nama: s.nama, kelas: s.kelas};
+  ["masuk","terlambat","sholat","sholatJam","halanganJam","pulang"].forEach(function(m){
+    if (rec && rec[m] !== undefined) fields[m] = rec[m];
+  });
+  if (rec && rec.absen) fields.absen = {jenis: rec.absen.jenis, keterangan: rec.absen.keterangan};
+  antreFirestore(docId, fields, hapus || []);
+  perbaruiBadgeSinkron();
+}
+
+/* ---------- Cek ganda lintas perangkat (saat online) ---------- */
+function sudahTercatatOnline(dateKey, nis, mode){
+  return new Promise(function(resolve){
+    if (!navigator.onLine || !FB_DB){ resolve(null); return; }
+    FB_DB.collection("absensi_siswa_qr").doc(dateKey + "_" + nis).get().then(function(doc){
+      if (!doc.exists){ resolve(null); return; }
+      var d = doc.data() || {};
+      if (mode === "datang" && d.masuk) resolve(d.masuk);
+      else if (mode === "sholat" && d.sholat === "sudah") resolve(d.sholatJam || "—");
+      else if (mode === "halangan" && d.sholat === "berhalangan") resolve(d.halanganJam || "—");
+      else if (mode === "pulang" && d.pulang) resolve(d.pulang);
+      else resolve(null);
+    }).catch(function(){ resolve(null); });
+  });
+}
+
+/* ---------- Terima data dari perangkat lain ---------- */
+function terapkanDocRemote(docId, data){
+  var p = docId.split("_");
+  if (p.length !== 2) return false;
+  var dateKey = p[0], nis = p[1];
+  if (!studentByNis(nis)) return false;
+  var entri = OUTBOX[docId];
+  var tertunda = entri ? (entri.hapus || []).concat(Object.keys(entri.fields || {})) : [];
+  var rec = (records[dateKey] && records[dateKey][nis]) ? records[dateKey][nis] : {};
+  var berubah = false;
+  function terapkan(medan, nilai){
+    if (tertunda.indexOf(medan) !== -1) return; /* masih menunggu kirim dari HP ini: jangan timpa */
+    if (rec[medan] !== nilai){ rec[medan] = nilai; berubah = true; }
+  }
+  function terapkanObjek(medan, nilai){
+    if (tertunda.indexOf(medan) !== -1) return;
+    if (JSON.stringify(rec[medan] || null) !== JSON.stringify(nilai)){ rec[medan] = nilai; berubah = true; }
+  }
+  if (data.masuk) terapkan("masuk", data.masuk);
+  if (typeof data.terlambat === "boolean") terapkan("terlambat", data.terlambat);
+  if (data.sholat){
+    terapkan("sholat", data.sholat);
+    if (data.sholatJam) terapkan("sholatJam", data.sholatJam);
+    if (data.halanganJam) terapkan("halanganJam", data.halanganJam);
+  }
+  if (data.pulang) terapkan("pulang", data.pulang);
+  if (data.absen) terapkanObjek("absen", {jenis: data.absen.jenis, keterangan: data.absen.keterangan});
+  /* Pembatalan dari perangkat lain: medan yang sudah tidak ada di dokumen jarak jauh ikut dihapus lokal. */
+  if (!data.sholat && rec.sholat && tertunda.indexOf("sholat") === -1){
+    delete rec.sholat; delete rec.sholatJam; delete rec.halanganJam; berubah = true;
+  }
+  if (!data.absen && rec.absen && tertunda.indexOf("absen") === -1){
+    delete rec.absen; berubah = true;
+  }
+  if (berubah){
+    if (Object.keys(rec).length === 0){
+      if (records[dateKey]) delete records[dateKey][nis];
+      hapusCatatanLokal(dateKey, nis);
+    } else {
+      if (!records[dateKey]) records[dateKey] = {};
+      records[dateKey][nis] = rec;
+      simpanCatatanLokal(dateKey, nis, rec);
+    }
+  }
+  return berubah;
+}
+var FB_UNSUB = null;
+function pasangListenerBulan(){
+  if (!FB_DB || !navigator.onLine) return;
+  var n = new Date();
+  var awal = n.getFullYear() + "-" + pad(n.getMonth()+1) + "-01";
+  var akhir = keyOf(new Date(n.getFullYear(), n.getMonth()+1, 1));
+  try {
+    if (FB_UNSUB) FB_UNSUB();
+    FB_UNSUB = FB_DB.collection("absensi_siswa_qr")
+      .where("tanggal", ">=", awal).where("tanggal", "<", akhir)
+      .onSnapshot(function(snap){
+        var berubah = false;
+        snap.docChanges().forEach(function(ch){
+          if (ch.type === "removed") return;
+          if (terapkanDocRemote(ch.doc.id, ch.doc.data())) berubah = true;
+        });
+        if (berubah) perbaruiSemuaTampilan();
+      }, function(){ /* listener gagal: antrean + ambil rentang tetap jalan */ });
+  } catch(e){}
+}
+function perluAmbil(awal, akhir){
+  var kunci = awal + "|" + akhir, skrg = Date.now();
+  if (RENTANG_DIIAMBIL[kunci] && skrg - RENTANG_DIIAMBIL[kunci] < 60000) return false;
+  RENTANG_DIIAMBIL[kunci] = skrg;
+  return true;
+}
+function ambilRentang(awal, akhir){
+  if (!FB_DB || !navigator.onLine) return Promise.resolve();
+  return FB_DB.collection("absensi_siswa_qr")
+    .where("tanggal", ">=", awal).where("tanggal", "<=", akhir).get()
+    .then(function(snap){
+      var berubah = false;
+      snap.forEach(function(doc){ if (terapkanDocRemote(doc.id, doc.data())) berubah = true; });
+      if (berubah) perbaruiSemuaTampilan();
+    }).catch(function(){});
+}
+function perbaruiSemuaTampilan(){
+  renderScan();
+  if (guruTerbuka()){ renderHarian(); renderMingguan(); renderBulanan(); renderSholat(); renderSholatBulan(); }
+  if (typeof ortuNisAktif !== "undefined" && ortuNisAktif){
+    var s = studentByNis(ortuNisAktif);
+    if (s && typeof renderOrtu === "function") renderOrtu(s);
+  }
+}
+
+/* ---------- Muat data lokal saat aplikasi dibuka ---------- */
+function muatDariIDB(){
+  return bukaIDB().then(function(){
+    return idbSemua("catatan").then(function(rows){
+      rows.forEach(function(r){
+        if (!r || !r.tanggal || !r.nis) return;
+        if (!records[r.tanggal]) records[r.tanggal] = {};
+        records[r.tanggal][r.nis] = r.rec;
+      });
+    }).then(function(){ return idbSemua("antrean"); }).then(function(rows){
+      rows.forEach(function(e){ if (e && e.docId) OUTBOX[e.docId] = e; });
+    });
+  });
+}
+function bangunFeedHariIni(){
+  feed = [];
+  var k = keyOf(new Date());
+  var daftar = [];
+  Object.keys(records[k] || {}).forEach(function(nis){
+    var s = studentByNis(nis);
+    if (!s) return;
+    var r = records[k][nis];
+    if (r.masuk) daftar.push([r.masuk, s.nama+" ("+s.kelas+") — DATANG"+(r.terlambat?" (terlambat)":"")]);
+    if (r.sholat === "sudah" && r.sholatJam) daftar.push([r.sholatJam, s.nama+" ("+s.kelas+") — SHOLAT DHUHUR"]);
+    if (r.sholat === "berhalangan" && r.halanganJam) daftar.push([r.halanganJam, s.nama+" ("+s.kelas+") — BERHALANGAN SHOLAT (scan guru piket)"]);
+    if (r.pulang) daftar.push([r.pulang, s.nama+" ("+s.kelas+") — PULANG"]);
+  });
+  daftar.sort(function(a,b){ return a[0]<b[0]?1:-1; });
+  daftar.slice(0,30).forEach(function(a){ feed.push({teks:a[1], jam:a[0]}); });
+}
+
+/* ---------- Jadwal (Firestore config/jadwal + cache lokal) ---------- */
+function gabungJadwal(d){
+  var j = JSON.parse(JSON.stringify(JADWAL_AWAL));
+  if (!d) return j;
+  if (d.jamMasuk) j.jamMasuk = d.jamMasuk;
+  if (d.batasTerlambat) j.batasTerlambat = d.batasTerlambat;
+  if (d.jamPulang) [1,2,3,4,5].forEach(function(g){ if (d.jamPulang[g]) j.jamPulang[g] = d.jamPulang[g]; });
+  /* jamPulang[6] (Sabtu) dan sabtuPlaceholder dari dokumen lama sengaja diabaikan: Sabtu libur. */
+  if (d.diubahPada) j.diubahPada = d.diubahPada;
+  if (d.diubahOleh) j.diubahOleh = d.diubahOleh;
+  return j;
+}
+function simpanCacheJadwal(){
+  try { localStorage.setItem("jadwal-cache", JSON.stringify(JADWAL)); } catch(e){}
+  idbSimpan("meta", {kunci:"jadwal", nilai: JSON.stringify(JADWAL)});
+}
+function terapkanJadwal(){
+  var chip = document.getElementById("chipJadwal");
+  if (chip) chip.textContent = teksJadwal();
+  var md = document.querySelector(".mode-pulang .md");
+  if (md) md.textContent = "Di gerbang, mulai pukul pulang hari itu (Senin " + JADWAL.jamPulang[1] +
+    ", Selasa–Kamis " + JADWAL.jamPulang[2] + ", Jumat " + JADWAL.jamPulang[5] +
+    "). Terpisah dari absen datang.";
+  isiFormPengaturan();
+}
+function muatJadwal(){
+  try {
+    var c = localStorage.getItem("jadwal-cache");
+    if (c){ JADWAL = gabungJadwal(JSON.parse(c)); terapkanJadwal(); }
+  } catch(e){}
+  if (!FB_DB || !navigator.onLine) return;
+  FB_DB.collection("config").doc("jadwal").get().then(function(doc){
+    if (doc.exists){ JADWAL = gabungJadwal(doc.data()); simpanCacheJadwal(); terapkanJadwal(); perbaruiSemuaTampilan(); }
+  }).catch(function(){});
+  try {
+    FB_DB.collection("config").doc("jadwal").onSnapshot(function(doc){
+      if (!doc.exists) return;
+      var baru = gabungJadwal(doc.data());
+      if (JSON.stringify(baru) !== JSON.stringify(JADWAL)){
+        JADWAL = baru; simpanCacheJadwal(); terapkanJadwal(); perbaruiSemuaTampilan();
+      }
+    });
+  } catch(e){}
+}
+function antreJadwal(baru){
+  idbSimpan("meta", {kunci:"jadwalTertunda", nilai: JSON.stringify(baru)});
+}
+function kirimJadwalTertunda(){
+  if (!FB_DB || !navigator.onLine) return;
+  idbAmbil("meta", "jadwalTertunda").then(function(j){
+    if (!j || !j.nilai) return;
+    var baru;
+    try { baru = JSON.parse(j.nilai); } catch(e){ return; }
+    FB_DB.collection("config").doc("jadwal").set(baru, {merge:true}).then(function(){
+      idbHapus("meta", "jadwalTertunda");
+      var st = document.getElementById("setStatus");
+      if (st) st.textContent = "✓ Perubahan jadwal yang tadi tertunda sudah terkirim ke semua HP guru.";
+    }).catch(function(){});
+  });
+}
+function isiFormPengaturan(){
+  var isi = function(id, nilai){ var el = document.getElementById(id); if (el && nilai) el.value = nilai; };
+  isi("setJamMasuk", JADWAL.jamMasuk);
+  isi("setBatasTerlambat", JADWAL.batasTerlambat);
+  [1,2,3,4,5].forEach(function(g){ isi("setPulang"+g, JADWAL.jamPulang[g]); });
+  var st = document.getElementById("setStatus");
+  if (st && !st.textContent) st.textContent = JADWAL.diubahPada
+    ? "Aturan terakhir diubah: " + JADWAL.diubahPada.slice(0,16).replace("T"," ") + "."
+    : "Aturan saat ini adalah aturan awal. Sabtu dan Minggu libur — tidak ada jam pulang.";
+}
+function simpanJadwal(){
+  var baca = function(id){ var el = document.getElementById(id); return el ? el.value : ""; };
+  var baru = JSON.parse(JSON.stringify(JADWAL));
+  var jm = baca("setJamMasuk"), bt = baca("setBatasTerlambat");
+  if (jm) baru.jamMasuk = jm;
+  if (bt) baru.batasTerlambat = bt;
+  [1,2,3,4,5].forEach(function(g){ var v = baca("setPulang"+g); if (v) baru.jamPulang[g] = v; });
+  baru.diubahPada = new Date().toISOString();
+  baru.diubahOleh = PERANGKAT_ID;
+  JADWAL = baru;
+  simpanCacheJadwal();
+  terapkanJadwal();
+  perbaruiSemuaTampilan();
+  var st = document.getElementById("setStatus");
+  if (FB_DB && navigator.onLine){
+    FB_DB.collection("config").doc("jadwal").set(baru, {merge:true}).then(function(){
+      if (st) st.textContent = "✓ Jadwal tersimpan dan tersinkron ke semua HP guru. Berlaku untuk scan sesudah perubahan ini.";
+    }).catch(function(){
+      antreJadwal(baru);
+      if (st) st.textContent = "Jadwal tersimpan di HP ini, belum terkirim (offline) — akan terkirim otomatis saat internet kembali.";
+    });
+  } else {
+    antreJadwal(baru);
+    if (st) st.textContent = "Jadwal tersimpan di HP ini, belum terkirim (offline) — akan terkirim otomatis saat internet kembali.";
+  }
+}
+function buatTabPengaturan(){
+  var tabs = document.querySelector(".subtabs");
+  if (!tabs || document.querySelector('[data-rekap="pengaturan"]')) return;
+  var b = document.createElement("button");
+  b.type = "button"; b.setAttribute("role","tab"); b.setAttribute("aria-selected","false");
+  b.setAttribute("data-rekap","pengaturan"); b.textContent = "⚙️ Pengaturan";
+  tabs.appendChild(b);
+  b.addEventListener("click", function(){ isiFormPengaturan(); });
+  var div = document.createElement("div");
+  div.id = "rekap-pengaturan"; div.className = "hidden";
+  div.innerHTML =
+    '<div class="card" style="margin-bottom:18px">' +
+    '<h3 style="margin-top:0">Pengaturan Jadwal</h3>' +
+    '<p class="lead">Aturan jam di bawah ini berlaku untuk <b>semua HP guru</b> karena tersimpan di server (Firestore config/jadwal), bukan di perangkat ini saja. Bila offline, dipakai aturan terakhir yang tersimpan di HP ini; begitu online, diambil yang terbaru. Perubahan hanya berlaku untuk scan <b>sesudah</b> perubahan — catatan yang sudah tersimpan tidak diubah.</p>' +
+    '<div class="flash" id="setFlash" role="status"></div>' +
+    '<div class="toolbar">' +
+    '<label>Jam masuk <input type="time" id="setJamMasuk" value="07:00"></label>' +
+    '<label>Batas terlambat <input type="time" id="setBatasTerlambat" value="07:00"></label>' +
+    '</div>' +
+    '<div class="toolbar">' +
+    '<label>Pulang Senin <input type="time" id="setPulang1" value="14:40"></label>' +
+    '<label>Pulang Selasa <input type="time" id="setPulang2" value="14:00"></label>' +
+    '<label>Pulang Rabu <input type="time" id="setPulang3" value="14:00"></label>' +
+    '<label>Pulang Kamis <input type="time" id="setPulang4" value="14:00"></label>' +
+    '<label>Pulang Jumat <input type="time" id="setPulang5" value="11:00"></label>' +
+    '</div>' +
+    '<p class="lead">Hari Sabtu dan Minggu libur, tidak ada jam pulang. Jam masuk dicatat untuk acuan; yang menentukan Terlambat adalah batas terlambat.</p>' +
+    '<button class="btn gold" id="setSimpanBtn" type="button">Simpan Jadwal</button>' +
+    '<p class="cam-status" id="setStatus" role="status"></p>' +
+    '</div>';
+  var sholatDiv = document.getElementById("rekap-sholat");
+  sholatDiv.parentNode.insertBefore(div, sholatDiv.nextSibling);
+  document.getElementById("setSimpanBtn").addEventListener("click", simpanJadwal);
+}
+
+/* ---------- Lencana status sinkronisasi (teks, bukan hanya warna) ---------- */
+(function(){
+  var p1 = document.createElement("p");
+  p1.id = "syncStatus"; p1.className = "cam-status";
+  p1.textContent = "Memeriksa status sinkronisasi…";
+  var stats = document.getElementById("scanStats");
+  if (stats && stats.parentNode) stats.parentNode.insertBefore(p1, stats.nextSibling);
+  var h2g = document.querySelector("#guruPanel h2");
+  if (h2g){
+    var p2 = document.createElement("p");
+    p2.id = "syncStatusGuru"; p2.className = "cam-status";
+    p2.textContent = "Memeriksa status sinkronisasi…";
+    h2g.parentNode.insertBefore(p2, h2g.nextSibling);
+  }
+  buatTabPengaturan();
+})();
+
+/* ---------- Pilihan bulan dinamis (bulan berjalan + 2 bulan sebelumnya) ---------- */
+function isiPilihanBulan(){
+  ["bulanSel","bulanSholatSel"].forEach(function(id){
+    var sel = document.getElementById(id);
+    if (!sel) return;
+    sel.innerHTML = "";
+    var n = new Date();
+    for (var m=0;m<3;m++){
+      var d = new Date(n.getFullYear(), n.getMonth()-m, 1);
+      var ym = d.getFullYear()+"-"+pad(d.getMonth()+1);
+      var op = document.createElement("option");
+      op.value = ym; op.textContent = d.toLocaleDateString("id-ID",{month:"long", year:"numeric"});
+      sel.appendChild(op);
+    }
+  });
+}
+
+
+function hashCode(nis, dateKey){
+  var s = nis + "|" + dateKey, h = 0;
+  for (var i=0;i<s.length;i++){ h = (h*31 + s.charCodeAt(i)) % 9973; }
+  return h;
+}
+/* Status sholat satu siswa pada satu tanggal:
+   "sudah" | "berhalangan" | "belum" (hadir, belum scan sholat/berhalangan, waktu pulang belum tiba)
+   | "tidak" (hadir tapi tidak sholat — hanya setelah waktu scan pulang tiba) | "alpa" (tidak hadir di sekolah) | null (belum ada catatan / hari belum berjalan / libur)
+   Aturan: untuk HARI INI, siswa yang sudah datang tetapi belum scan sholat dan belum di-scan berhalangan
+   berstatus "belum" (Belum Sholat). Statusnya baru berubah otomatis menjadi "tidak" (Tidak Sholat)
+   bila sudah sampai waktunya scan Pulang (pukul pulang hari itu) — atau siswa itu sudah scan pulang —
+   dan tetap belum ada scan sholat maupun scan berhalangan. Untuk tanggal yang sudah lewat, statusnya langsung final "tidak". */
+function statusSholat(dateKey, nis){
+  var d = parseKey(dateKey);
+  var todayKey = keyOf(new Date());
+  if (!isSchoolDay(d) || dateKey > todayKey) return null;
+  var rec = getRecord(dateKey, nis);
+  if (!rec){
+    if (dateKey === todayKey) return null;
+    /* Hari sudah lewat: bila tanggal itu sama sekali belum ada catatan (aplikasi belum dipakai),
+       jangan tuduh siapa pun; bila hari itu sudah berjalan dan siswa ini tanpa catatan, ia tidak hadir. */
+    return adaDataTanggal(dateKey) ? "alpa" : null;
+  }
+  if (rec.alpa) return "alpa";
+  if (rec.sholat === "sudah") return "sudah";
+  if (rec.sholat === "berhalangan") return "berhalangan";
+  if (rec.absen && !rec.masuk) return rec.absen.jenis; /* "sakit" | "izin": tidak hadir dengan keterangan wali kelas */
+  if (!rec.masuk && dateKey === todayKey) return null;
+  if (dateKey < todayKey) return "tidak";
+  /* Hari ini, sudah datang, belum ada scan sholat / berhalangan: */
+  var jp = jamPulangFor(parseKey(dateKey));
+  var sudahWaktuPulang = (jp ? nowTime() >= jp : false) || !!rec.pulang;
+  return sudahWaktuPulang ? "tidak" : "belum";
+}
+function badgeSholat(dateKey, nis){
+  var st = statusSholat(dateKey, nis);
+  var rec = getRecord(dateKey, nis);
+  if (st === "sudah") return '<span class="badge b-ok">🕌 Sholat '+(rec && rec.sholatJam ? rec.sholatJam : "")+'</span>';
+  if (st === "berhalangan") return '<span class="badge b-info">Berhalangan sholat'+(rec && rec.halanganJam ? " · scan "+rec.halanganJam : "")+'</span>';
+  if (st === "belum") return '<span class="badge b-none">Belum sholat</span>';
+  if (st === "tidak") return '<span class="badge b-bad">Tidak sholat</span>';
+  if (st === "sakit") return '<span class="badge b-warn">Sakit — tidak hadir</span>';
+  if (st === "izin") return '<span class="badge b-info">Izin — tidak hadir</span>';
+  if (st === "alpa") return '<span class="badge b-none">Tidak hadir</span>';
+  return '<span class="badge b-none">Belum sholat</span>';
+}
+function getRecord(dateKey, nis){
+  if (records[dateKey] && records[dateKey][nis] !== undefined) return records[dateKey][nis];
+  return null;
+}
+
+
+/* ================= JAM ================= */
+var _sudahWaktuPulangSebelumnya = null;
+function tick(){
+  var n = new Date();
+  document.getElementById("tglLabel").textContent = fmtTgl(n);
+  document.getElementById("jamLabel").textContent = pad(n.getHours())+":"+pad(n.getMinutes())+":"+pad(n.getSeconds());
+  /* Begitu jam melewati waktu scan Pulang hari itu, status Belum Sholat yang belum ada scan
+     sholat/berhalangan berubah otomatis menjadi Tidak Sholat — segarkan tampilan tanpa reload. */
+  var jpHariIni = jamPulangHariIni();
+  var sekarangSudahWaktuPulang = jpHariIni ? nowTime() >= jpHariIni : false;
+  if (_sudahWaktuPulangSebelumnya !== null && sekarangSudahWaktuPulang !== _sudahWaktuPulangSebelumnya){
+    if (typeof renderScan === "function") renderScan();
+    var guruTerbuka = document.getElementById("guruPanel") && !document.getElementById("guruPanel").classList.contains("hidden");
+    if (guruTerbuka && typeof renderHarian === "function"){ renderHarian(); renderSholat(); renderSholatBulan(); }
+    if (typeof ortuNisAktif !== "undefined" && ortuNisAktif){
+      var sAktif = studentByNis(ortuNisAktif);
+      if (sAktif && typeof renderOrtu === "function") renderOrtu(sAktif);
+    }
+  }
+  _sudahWaktuPulangSebelumnya = sekarangSudahWaktuPulang;
+}
+tick(); setInterval(tick, 1000);
+
+/* ================= NAVIGASI ================= */
+var tabBtns = document.querySelectorAll("nav.tabs button");
+tabBtns.forEach(function(b){
+  b.addEventListener("click", function(){
+    tabBtns.forEach(function(x){ x.setAttribute("aria-selected","false"); });
+    b.setAttribute("aria-selected","true");
+    document.querySelectorAll("section.view").forEach(function(v){ v.classList.remove("active"); });
+    document.getElementById("view-"+b.getAttribute("data-view")).classList.add("active");
+    if (b.getAttribute("data-view") !== "scan" && typeof matikanKamera === "function" && typeof camStream !== "undefined" && camStream)
+      matikanKamera("Kamera dimatikan karena berpindah halaman. Nyalakan lagi di halaman Scan Absensi bila diperlukan.");
+  });
+});
+function goView(name){
+  tabBtns.forEach(function(b){ if (b.getAttribute("data-view")===name) b.click(); });
+}
+
+/* ================= SCAN ================= */
+function statusDatang(rec){
+  if (!rec) return null;
+  if (rec.alpa) return "alpa";
+  if (!rec.masuk) return null;
+  /* Status Terlambat/Tepat dicatat bersama scan Datang (rec.terlambat), sehingga perubahan
+     batas terlambat di Pengaturan tidak mengubah status catatan yang sudah tersimpan. */
+  if (typeof rec.terlambat === "boolean") return rec.terlambat ? "terlambat" : "tepat";
+  return rec.masuk > JADWAL.batasTerlambat ? "terlambat" : "tepat";
+}
+function badgeFor(rec, dateKey, nis){
+  if (rec && rec.absen && !rec.masuk) return badgeAbsen(rec.absen)+' '+badgeSholat(dateKey, nis);
+  if (!rec || (!rec.masuk && !rec.alpa)) return '<span class="badge b-none">Belum datang</span> '+badgeSholat(dateKey, nis);
+  if (rec.alpa) return '<span class="badge b-bad">Tidak hadir</span>';
+  var s = "";
+  s += statusDatang(rec)==="terlambat"
+    ? '<span class="badge b-warn">Terlambat '+rec.masuk+'</span>'
+    : '<span class="badge b-ok">Datang '+rec.masuk+'</span>';
+  s += ' ' + badgeSholat(dateKey, nis);
+  s += rec.pulang ? ' <span class="badge b-info">Pulang '+rec.pulang+'</span>'
+                  : ' <span class="badge b-none">Belum pulang</span>';
+  return s;
+}
+
+/* ---------- Mode scan terpisah: datang | sholat | pulang ---------- */
+var scanMode = "datang";
+var MODE_INFO = {
+  datang: {label:"Absen Datang", banner:"Mode aktif: ABSEN DATANG — scan tercatat sebagai kedatangan di gerbang. Scan sholat, berhalangan, dan pulang tidak terpengaruh mode ini."},
+  sholat: {label:"Absen Sholat Dhuhur", banner:"Mode aktif: ABSEN SHOLAT DHUHUR — siswa memindai kartunya saat keluar masjid/mushola; scan tercatat sebagai sudah sholat. Untuk siswa yang berhalangan, guru piket memakai mode Scan Berhalangan."},
+  pulang: {label:"Absen Pulang", banner:"Mode aktif: ABSEN PULANG — scan tercatat sebagai kepulangan. Berbeda dari absen datang: siswa tetap bisa scan pulang walaupun absen datangnya terlewat."},
+  halangan: {label:"Scan Berhalangan", banner:"Mode aktif: SCAN BERHALANGAN — dipakai guru piket yang berkeliling sekolah. Pindai kartu siswa yang tidak sholat karena berhalangan (haid / sakit / izin): siswa terekap Berhalangan, bukan Tidak Sholat."}
+};
+var modeBtns = document.querySelectorAll("[data-mode]");
+modeBtns.forEach(function(b){
+  b.addEventListener("click", function(){
+    scanMode = b.getAttribute("data-mode");
+    modeBtns.forEach(function(x){ x.setAttribute("aria-selected", x===b ? "true" : "false"); });
+    renderScan();
+  });
+});
+function renderScan(){
+  var k = keyOf(new Date());
+  document.getElementById("modeBanner").textContent = MODE_INFO[scanMode].banner;
+  document.getElementById("scanCardTitle").textContent = "Scan "+MODE_INFO[scanMode].label+" — Ketuk Nama Siswa";
+  document.getElementById("manualBtn").textContent = "Scan untuk "+MODE_INFO[scanMode].label;
+  var grid = document.getElementById("pupilGrid");
+  grid.innerHTML = "";
+  var nDatang=0, nSholat=0, nHalangan=0, nPulang=0;
+  STUDENTS.forEach(function(s){
+    var rec = getRecord(k, s.nis);
+    if (rec && rec.masuk) nDatang++;
+    var ss = statusSholat(k, s.nis);
+    if (ss === "sudah") nSholat++;
+    if (ss === "berhalangan") nHalangan++;
+    if (rec && rec.pulang) nPulang++;
+    var btn = document.createElement("button");
+    btn.className = "pupil"; btn.type = "button";
+    btn.innerHTML = '<span class="nm"></span><span class="meta"></span><span class="st">'+badgeFor(rec, k, s.nis)+'</span>';
+    btn.querySelector(".nm").textContent = s.nama;
+    btn.querySelector(".meta").textContent = s.kelas+" · NIS "+s.nis;
+    btn.addEventListener("click", function(){ doScan(s.nis); });
+    grid.appendChild(btn);
+  });
+  document.getElementById("scanStats").innerHTML =
+    statHtml(nDatang+" / "+STUDENTS.length, "Sudah datang") +
+    statHtml(nSholat, "Sudah sholat dhuhur") +
+    statHtml(nHalangan, "Berhalangan sholat") +
+    statHtml(nPulang, "Sudah pulang");
+  var f = document.getElementById("feed");
+  f.innerHTML = feed.length ? "" : '<li><span>Belum ada aktivitas scan.</span></li>';
+  feed.slice(0,12).forEach(function(e){
+    var li = document.createElement("li");
+    var sp = document.createElement("span"); sp.textContent = e.teks;
+    var tm = document.createElement("span"); tm.className="t"; tm.textContent = e.jam;
+    li.appendChild(sp); li.appendChild(tm); f.appendChild(li);
+  });
+}
+function statHtml(num, lbl){
+  return '<div class="stat"><div class="num">'+num+'</div><div class="lbl">'+lbl+'</div></div>';
+}
+function flash(kind, teks){
+  var el = document.getElementById("flash");
+  el.className = "flash show "+kind; el.textContent = teks;
+  clearTimeout(flash._t);
+  flash._t = setTimeout(function(){ el.classList.remove("show"); }, 6000);
+}
+async function doScan(nisRaw){
+  var nis = String(nisRaw).replace(/\D/g,"");
+  var s = studentByNis(nis);
+  if (!s){ flash("bad", "NIS "+(nisRaw||"—")+" tidak ditemukan pada daftar siswa."); return; }
+  var k = keyOf(new Date());
+  if (!records[k]) records[k] = {};
+  var rec = records[k][nis] || {};
+  var hapusScan = []; /* medan yang sengaja dihapus oleh scan ini (mis. tanda Sakit/Izin yang gugur karena siswa ternyata datang) */
+  /* Cek ganda lintas perangkat: bila guru lain sudah mencatat mode ini hari ini (di Firestore),
+     tolak — jangan rekam dua kali. Bila offline, pemeriksaan hanya memakai data di HP ini. */
+  var remoteSudah = await sudahTercatatOnline(k, nis, scanMode);
+  if (remoteSudah){
+    flash("bad", "Scan ditolak: "+s.nama+" sudah tercatat "+MODE_INFO[scanMode].label.toLowerCase()+" hari ini (dicatat perangkat lain pukul "+remoteSudah+").");
+    return;
+  }
+  if (rec.alpa){ flash("bad", "Scan ditolak: "+s.nama+" tercatat tidak hadir hari ini."); return; }
+  var jam = nowTime();
+
+  if (scanMode === "datang"){
+    if (rec.masuk){
+      flash("bad", "Scan DATANG ditolak: "+s.nama+" sudah tercatat datang pukul "+rec.masuk+" hari ini. Untuk mencatat sholat atau pulang, pilih dulu modenya di bagian atas — scan di sini tidak otomatis menjadi absen lain.");
+      return;
+    }
+    var tandaAbsen = rec.absen ? labelAbsen(rec.absen) : null;
+    if (rec.absen){ delete rec.absen; hapusScan = ["absen"]; } /* siswa ternyata hadir: tanda Sakit/Izin wali kelas gugur */
+    var telat = jam > JADWAL.batasTerlambat;
+    rec.masuk = jam; rec.terlambat = telat; records[k][nis] = rec;
+    feed.unshift({teks: s.nama+" ("+s.kelas+") — DATANG"+(telat?" (terlambat)":""), jam: jam});
+    flash(telat ? "warn" : "ok",
+      (telat ? "⏰ TERLAMBAT — " : "✓ DATANG tercatat — ") + s.nama+" · "+s.kelas+" · pukul "+jam+" WIB." +
+      (tandaAbsen ? " Tanda "+tandaAbsen+" dari wali kelas untuk hari ini otomatis dibatalkan karena siswa tercatat datang." : ""));
+  }
+  else if (scanMode === "sholat"){
+    if (rec.sholat === "sudah"){
+      flash("bad", "Scan SHOLAT ditolak: "+s.nama+" sudah tercatat sholat dhuhur pukul "+rec.sholatJam+" hari ini.");
+      return;
+    }
+    if (rec.sholat === "berhalangan"){
+      flash("bad", "Scan SHOLAT ditolak: "+s.nama+" sudah tercatat BERHALANGAN sholat hari ini lewat scan guru piket"+(rec.halanganJam ? " pukul "+rec.halanganJam : "")+". Bila keliru, batalkan dulu catatannya di Rekap Guru → tab Sholat Dhuhur.");
+      return;
+    }
+    rec.sholat = "sudah"; rec.sholatJam = jam; delete rec.halanganJam; records[k][nis] = rec;
+    feed.unshift({teks: s.nama+" ("+s.kelas+") — SHOLAT DHUHUR", jam: jam});
+    flash("ok", "✓ SHOLAT DHUHUR tercatat — "+s.nama+" · "+s.kelas+" · pukul "+jam+" WIB." + (rec.masuk ? "" : " Catatan: belum ada catatan datang hari ini."));
+  }
+  else if (scanMode === "halangan"){
+    if (rec.sholat === "sudah"){
+      flash("bad", "Scan BERHALANGAN ditolak: "+s.nama+" sudah tercatat sholat dhuhur"+(rec.sholatJam ? " pukul "+rec.sholatJam : "")+" hari ini (scan saat keluar masjid), jadi tidak dapat dicatat berhalangan.");
+      return;
+    }
+    if (rec.sholat === "berhalangan"){
+      flash("bad", "Scan BERHALANGAN ditolak: "+s.nama+" sudah tercatat berhalangan hari ini lewat scan guru piket"+(rec.halanganJam ? " pukul "+rec.halanganJam : "")+".");
+      return;
+    }
+    rec.sholat = "berhalangan"; rec.halanganJam = jam; delete rec.sholatJam; records[k][nis] = rec;
+    feed.unshift({teks: s.nama+" ("+s.kelas+") — BERHALANGAN SHOLAT (scan guru piket)", jam: jam});
+    flash("ok", "✓ BERHALANGAN tercatat lewat scan guru piket — "+s.nama+" · "+s.kelas+" · pukul "+jam+" WIB. Di rekap statusnya Berhalangan, bukan Tidak Sholat." + (rec.masuk ? "" : " Catatan: belum ada catatan datang hari ini."));
+  }
+  else { /* pulang */
+    var jpHariIni = jamPulangHariIni();
+    if (!jpHariIni){ flash("bad", "Scan PULANG ditolak: hari ini libur (Sabtu/Minggu), tidak ada jam pulang."); return; }
+    if (jam < jpHariIni){ flash("bad", "Scan PULANG ditolak: belum waktunya pulang. Pulang hari ini mulai pukul "+jpHariIni+" WIB."); return; }
+    if (rec.pulang){
+      flash("bad", "Scan PULANG ditolak: "+s.nama+" sudah tercatat pulang pukul "+rec.pulang+" hari ini.");
+      return;
+    }
+    rec.pulang = jam; records[k][nis] = rec;
+    feed.unshift({teks: s.nama+" ("+s.kelas+") — PULANG", jam: jam});
+    flash("ok", "✓ PULANG tercatat — "+s.nama+" · "+s.kelas+" · pukul "+jam+" WIB." + (rec.masuk ? "" : " Catatan: belum ada catatan datang hari ini."));
+  }
+  catatanBerubah(k, nis, records[k][nis], scanMode, hapusScan);
+  renderScan();
+  if (ortuNisAktif === nis) renderOrtu(s);
+  if (!document.getElementById("guruPanel").classList.contains("hidden")){ renderHarian(); renderSholat(); }
+}
+
+/* ---------- Batalkan berhalangan (koreksi scan yang keliru, dari Rekap Guru) ---------- */
+function batalkanBerhalangan(nis, dateKey){
+  var s = studentByNis(nis); if (!s) return;
+  var k = dateKey || keyOf(new Date());
+  var rec = getRecord(k, nis) || (records[k] && records[k][nis]);
+  if (rec && rec.sholat === "berhalangan"){ delete rec.sholat; delete rec.sholatJam; delete rec.halanganJam; catatanBerubah(k, nis, rec, "halangan", ["sholat","sholatJam","halanganJam"]); }
+  flash("warn", "Catatan berhalangan "+s.nama+" dibatalkan. Status sholatnya kembali Belum Sholat (baru menjadi Tidak Sholat bila sampai waktu scan pulang tetap belum ada scan sholat atau scan berhalangan baru).");
+  renderScan(); renderSholat(); renderHarian();
+  if (ortuNisAktif === nis) renderOrtu(s);
+}
+
+/* ---------- Tandai Sakit / Izin oleh wali kelas (halaman Guru) ---------- */
+var tglAbsen = document.getElementById("tglAbsen");
+tglAbsen.value = keyOf(new Date());
+tglAbsen.max = keyOf(new Date());
+var absenSiswaSel = document.getElementById("absenSiswa");
+STUDENTS.forEach(function(s){
+  var op = document.createElement("option");
+  op.value = s.nis; op.textContent = s.nama+" — "+s.kelas+" (NIS "+s.nis+")";
+  absenSiswaSel.appendChild(op);
+});
+function flashAbsen(kind, teks){
+  var el = document.getElementById("absenFlash");
+  el.className = "flash show "+kind; el.textContent = teks;
+  clearTimeout(flashAbsen._t);
+  flashAbsen._t = setTimeout(function(){ el.classList.remove("show"); }, 7000);
+}
+function segarkanSetelahAbsen(nis){
+  renderScan(); renderHarian(); renderMingguan(); renderBulanan(); renderSholat(); renderSholatBulan(); renderAbsenList();
+  var s = studentByNis(nis);
+  if (s && ortuNisAktif === nis) renderOrtu(s);
+}
+function tandaiAbsen(){
+  var dateKey = tglAbsen.value || keyOf(new Date());
+  var nis = absenSiswaSel.value;
+  var s = studentByNis(nis);
+  if (!s){ flashAbsen("bad", "Pilih dulu siswa yang akan ditandai."); return; }
+  if (dateKey > keyOf(new Date())){ flashAbsen("bad", "Tanggal belum berjalan — penandaan hanya untuk hari ini atau hari yang sudah lewat."); return; }
+  if (!isSchoolDay(parseKey(dateKey))){ flashAbsen("bad", "Tanggal "+fmtTglShort(parseKey(dateKey))+" adalah hari libur (Sabtu/Minggu), tidak perlu ditandai."); return; }
+  var jenis = document.getElementById("absenJenis").value;
+  var alasan = document.getElementById("absenAlasan").value;
+  var catatan = document.getElementById("absenCatatan").value.replace(/\s+/g," ").trim();
+  if (alasan === "Lainnya" && !catatan){
+    flashAbsen("bad", "Keterangan dipilih Lainnya — isi dulu catatan bebasnya, misalnya keperluan apa.");
+    document.getElementById("absenCatatan").focus();
+    return;
+  }
+  var keterangan = alasan === "Lainnya" ? catatan : (catatan ? alasan+" — "+catatan : alasan);
+  if (!records[dateKey]) records[dateKey] = {};
+  var rec = getRecord(dateKey, nis) || records[dateKey][nis] || {};
+  if (rec.masuk){
+    flashAbsen("bad", s.nama+" sudah tercatat datang pukul "+rec.masuk+" pada tanggal ini, jadi tidak dapat ditandai "+(jenis==="sakit"?"Sakit":"Izin")+".");
+    return;
+  }
+  if (rec.absen){
+    flashAbsen("warn", s.nama+" sudah ditandai "+labelAbsen(rec.absen)+" ("+rec.absen.keterangan+") pada tanggal ini. Batalkan dulu tanda itu pada daftar di bawah bila ingin mengubahnya.");
+    return;
+  }
+  delete rec.alpa;
+  rec.absen = {jenis: jenis, keterangan: keterangan};
+  records[dateKey][nis] = rec;
+  catatanBerubah(dateKey, nis, rec, "absen", []);
+  if (dateKey === keyOf(new Date()))
+    feed.unshift({teks: s.nama+" ("+s.kelas+") — "+labelAbsen(rec.absen).toUpperCase()+" · "+keterangan+" (ditandai wali kelas)", jam: nowTime()});
+  document.getElementById("absenCatatan").value = "";
+  flashAbsen("ok", "✓ "+labelAbsen(rec.absen)+" tercatat — "+s.nama+" · "+s.kelas+" · "+fmtTglShort(parseKey(dateKey))+" · keterangan: "+keterangan+". Siswa tidak dihitung alpa pada tanggal ini.");
+  segarkanSetelahAbsen(nis);
+}
+function batalkanAbsen(nis, dateKey){
+  var s = studentByNis(nis); if (!s) return;
+  var rec = getRecord(dateKey, nis) || (records[dateKey] && records[dateKey][nis]);
+  if (rec && rec.absen){
+    var dulu = labelAbsen(rec.absen);
+    delete rec.absen;
+    catatanBerubah(dateKey, nis, rec, "absen", ["absen"]);
+    flashAbsen("warn", "Tanda "+dulu+" untuk "+s.nama+" pada "+fmtTglShort(parseKey(dateKey))+" dibatalkan. Bila tidak ada keterangan lain, statusnya kembali alpa / belum ada catatan.");
+    segarkanSetelahAbsen(nis);
+  }
+}
+function renderAbsenList(){
+  var dateKey = tglAbsen.value || keyOf(new Date());
+  var box = document.getElementById("absenList");
+  box.innerHTML = "";
+  var ada = [];
+  STUDENTS.forEach(function(s){
+    var rec = getRecord(dateKey, s.nis);
+    if (rec && rec.absen && !rec.masuk) ada.push({s:s, abs:rec.absen});
+  });
+  var judul = document.createElement("h3");
+  judul.style.margin = "14px 0 8px";
+  judul.textContent = "Sudah ditandai pada "+fmtTgl(parseKey(dateKey))+" ("+ada.length+" siswa)";
+  box.appendChild(judul);
+  if (!ada.length){
+    var p = document.createElement("p");
+    p.className = "lead"; p.style.margin = "0";
+    p.textContent = "Belum ada siswa yang ditandai Sakit/Izin pada tanggal ini.";
+    box.appendChild(p);
+    return;
+  }
+  var ul = document.createElement("ul");
+  ul.className = "feed"; ul.style.maxHeight = "none";
+  ada.forEach(function(a){
+    var li = document.createElement("li");
+    var kiri = document.createElement("span");
+    kiri.textContent = a.s.nama+" ("+a.s.kelas+") — "+labelAbsen(a.abs)+" · "+a.abs.keterangan;
+    var btn = document.createElement("button");
+    btn.type = "button"; btn.className = "btn ghost small"; btn.textContent = "Batalkan";
+    btn.addEventListener("click", function(){ batalkanAbsen(a.s.nis, dateKey); });
+    li.appendChild(kiri); li.appendChild(btn);
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+}
+document.getElementById("absenBtn").addEventListener("click", tandaiAbsen);
+tglAbsen.addEventListener("change", renderAbsenList);
+document.getElementById("manualBtn").addEventListener("click", function(){
+  doScan(document.getElementById("manualNis").value);
+});
+document.getElementById("manualNis").addEventListener("keydown", function(e){
+  if (e.key === "Enter") doScan(e.target.value);
+});
+
+/* ================= GURU: PIN ================= */
+document.getElementById("pinBtn").addEventListener("click", cekPin);
+document.getElementById("pinInput").addEventListener("keydown", function(e){ if (e.key==="Enter") cekPin(); });
+function cekPin(){
+  if (document.getElementById("pinInput").value === "1234"){
+    document.getElementById("pinGate").classList.add("hidden");
+    document.getElementById("guruPanel").classList.remove("hidden");
+    renderHarian(); renderMingguan(); renderBulanan(); renderSholat(); renderSholatBulan(); renderAbsenList();
+  } else {
+    document.getElementById("pinErr").textContent = "PIN salah. Coba lagi.";
+  }
+}
+var rekapBtns = document.querySelectorAll("[data-rekap]");
+rekapBtns.forEach(function(b){
+  b.addEventListener("click", function(){
+    rekapBtns.forEach(function(x){ x.setAttribute("aria-selected","false"); });
+    b.setAttribute("aria-selected","true");
+    ["harian","mingguan","bulanan","sholat","pengaturan"].forEach(function(r){
+      document.getElementById("rekap-"+r).classList.toggle("hidden", r !== b.getAttribute("data-rekap"));
+    });
+  });
+});
+
+/* ================= GURU: HARIAN ================= */
+var tglHarian = document.getElementById("tglHarian");
+tglHarian.value = keyOf(new Date());
+tglHarian.max = keyOf(new Date());
+document.getElementById("kelasHarian").addEventListener("change", renderHarian);
+tglHarian.addEventListener("change", renderHarian);
+
+function barisHarian(dateKey, kelasFilter){
+  var d = parseKey(dateKey), rows = [], counts = {datang:0, telat:0, pulang:0, belum:0, sakit:0, izin:0};
+  var libur = !isSchoolDay(d), masaDepan = dateKey > keyOf(new Date());
+  var tanpaData = !adaDataTanggal(dateKey) && dateKey < keyOf(new Date());
+  STUDENTS.forEach(function(s){
+    if (kelasFilter && s.kelas !== kelasFilter) return;
+    var rec = getRecord(dateKey, s.nis);
+    var st = statusDatang(rec);
+    var abs = (rec && rec.absen && !rec.masuk) ? rec.absen : null;
+    if (tanpaData){ rows.push({s:s, rec:rec, st:st, absen:abs, ket:"Belum ada catatan absensi pada tanggal ini."}); return; }
+    if (rec && rec.masuk) counts.datang++;
+    if (st === "terlambat") counts.telat++;
+    if (rec && rec.pulang) counts.pulang++;
+    if (abs) counts[abs.jenis]++;
+    else if (!rec || (!rec.masuk && !rec.alpa)) counts.belum++;
+    var ket = libur ? "Hari libur" : masaDepan ? "Belum berjalan"
+      : abs ? labelAbsen(abs)+" — "+abs.keterangan+" (ditandai wali kelas; tidak dihitung alpa)"
+      : rec && rec.alpa ? "Tidak hadir / alpa (tanpa keterangan)"
+      : rec && rec.masuk && !rec.pulang ? "Belum scan pulang"
+      : rec && rec.masuk ? "Lengkap" : "Belum scan datang";
+    rows.push({s:s, rec:rec, st:st, absen:abs, ket:ket});
+  });
+  return {rows:rows, counts:counts};
+}
+function renderHarian(){
+  var dateKey = tglHarian.value || keyOf(new Date());
+  if (perluAmbil(dateKey, dateKey)) ambilRentang(dateKey, dateKey);
+  var kelas = document.getElementById("kelasHarian").value;
+  var data = barisHarian(dateKey, kelas);
+  document.getElementById("harianStats").innerHTML =
+    statHtml(data.counts.datang, "Sudah datang") + statHtml(data.counts.telat, "Terlambat") +
+    statHtml(data.counts.pulang, "Sudah pulang") + statHtml(data.counts.belum, "Belum hadir") +
+    statHtml(data.counts.sakit, "Sakit (wali kelas)") + statHtml(data.counts.izin, "Izin (wali kelas)");
+  var tb = document.getElementById("tbodyHarian"); tb.innerHTML = "";
+  data.rows.forEach(function(r){
+    var tr = document.createElement("tr");
+    var stBadge = r.absen ? badgeAbsen(r.absen)
+      : r.rec && r.rec.alpa ? '<span class="badge b-bad">Tidak hadir (alpa)</span>'
+      : r.st === "terlambat" ? '<span class="badge b-warn">Terlambat</span>'
+      : r.st === "tepat" ? '<span class="badge b-ok">Tepat waktu</span>'
+      : '<span class="badge b-none">—</span>';
+    tr.innerHTML =
+      '<td data-l="Nama"></td><td data-l="Kelas"></td>' +
+      '<td data-l="Datang" class="mono">'+(r.rec && r.rec.masuk ? r.rec.masuk : "—")+'</td>' +
+      '<td data-l="Status Datang">'+stBadge+'</td>' +
+      '<td data-l="Sholat Dhuhur">'+badgeSholat(dateKey, r.s.nis)+'</td>' +
+      '<td data-l="Pulang" class="mono">'+(r.rec && r.rec.pulang ? r.rec.pulang : "—")+'</td>' +
+      '<td data-l="Keterangan"></td>';
+    tr.children[0].textContent = r.s.nama;
+    tr.children[1].textContent = r.s.kelas;
+    tr.children[6].textContent = r.ket;
+    tb.appendChild(tr);
+  });
+}
+
+/* ================= GURU: MINGGUAN ================= */
+var mingguSel = document.getElementById("mingguSel");
+(function(){
+  var skrg = new Date();
+  var seninIni = new Date(skrg); seninIni.setDate(skrg.getDate() - ((skrg.getDay()+6) % 7));
+  var daftarMinggu = [];
+  for (var m=0;m<4;m++){
+    var sn = new Date(seninIni); sn.setDate(seninIni.getDate() - m*7);
+    var jm = new Date(sn); jm.setDate(sn.getDate()+4);
+    daftarMinggu.push([keyOf(sn), (m===0?"Minggu ini · ":"") + fmtTglShort(sn)+"–"+fmtTglShort(jm)+" "+jm.getFullYear()]);
+  }
+  daftarMinggu.forEach(function(o){
+  var op = document.createElement("option"); op.value = o[0]; op.textContent = o[1]; mingguSel.appendChild(op);
+  });
+})();
+mingguSel.addEventListener("change", renderMingguan);
+document.getElementById("kelasMingguan").addEventListener("change", renderMingguan);
+
+function hariMinggu(seninKey){
+  var out = [], d = parseKey(seninKey);
+  for (var i=0;i<5;i++){ var x = new Date(d); x.setDate(d.getDate()+i); out.push(x); }
+  return out;
+}
+function kodeHari(dateKey, nis){
+  if (dateKey > keyOf(new Date())) return "–";
+  var rec = getRecord(dateKey, nis);
+  if (!rec) return (dateKey < keyOf(new Date()) && adaDataTanggal(dateKey)) ? "A" : "–";
+  if (rec.absen && !rec.masuk) return rec.absen.jenis === "sakit" ? "S" : "I";
+  if (rec.alpa) return "A";
+  if (!rec.masuk) return "–";
+  return statusDatang(rec) === "terlambat" ? "T" : "H";
+}
+function renderMingguan(){
+  var days = hariMinggu(mingguSel.value);
+  if (perluAmbil(keyOf(days[0]), keyOf(days[4]))) ambilRentang(keyOf(days[0]), keyOf(days[4]));
+  var kelas = document.getElementById("kelasMingguan").value;
+  var th = document.getElementById("theadMingguan");
+  th.innerHTML = "<tr><th>Nama</th><th>Kelas</th>" +
+    days.map(function(d){ return '<th class="ctr">'+fmtTglShort(d)+'</th>'; }).join("") + "</tr>";
+  var tb = document.getElementById("tbodyMingguan"); tb.innerHTML = "";
+  STUDENTS.forEach(function(s){
+    if (kelas && s.kelas !== kelas) return;
+    var tr = document.createElement("tr");
+    var tds = days.map(function(d){
+      var kode = kodeHari(keyOf(d), s.nis);
+      var cls = kode==="H" ? "b-ok" : kode==="T" ? "b-warn" : kode==="S" ? "b-warn" : kode==="I" ? "b-info" : kode==="A" ? "b-bad" : "b-none";
+      return '<td class="ctr"><span class="badge '+cls+'">'+kode+'</span></td>';
+    }).join("");
+    tr.innerHTML = "<td></td><td></td>"+tds;
+    tr.children[0].textContent = s.nama;
+    tr.children[1].textContent = s.kelas;
+    tb.appendChild(tr);
+  });
+}
+
+/* ================= GURU: BULANAN ================= */
+document.getElementById("bulanSel").addEventListener("change", renderBulanan);
+document.getElementById("kelasBulanan").addEventListener("change", renderBulanan);
+function ringkasBulan(ym, nis){
+  var p = ym.split("-"), y = +p[0], m = +p[1]-1;
+  var todayKey = keyOf(new Date());
+  var hadir=0, telat=0, alpa=0, sakit=0, izin=0, total=0;
+  var d = new Date(y, m, 1);
+  while (d.getMonth() === m){
+    var k = keyOf(d);
+    if (isSchoolDay(d) && k <= todayKey && adaDataTanggal(k)){
+      total++;
+      var rec = getRecord(k, nis);
+      if (rec && rec.alpa) alpa++;
+      else if (rec && rec.masuk){ hadir++; if (rec.masuk > JADWAL.batasTerlambat) telat++; }
+      else if (rec && rec.absen){ if (rec.absen.jenis === "sakit") sakit++; else izin++; }
+      else alpa++;
+    }
+    d.setDate(d.getDate()+1);
+  }
+  return {hadir:hadir, telat:telat, alpa:alpa, sakit:sakit, izin:izin, total:total};
+}
+function renderBulanan(){
+  var ym = document.getElementById("bulanSel").value;
+  var pB = ym.split("-");
+  if (perluAmbil(ym+"-01", keyOf(new Date(+pB[0], +pB[1], 0)))) ambilRentang(ym+"-01", keyOf(new Date(+pB[0], +pB[1], 0)));
+  var kelas = document.getElementById("kelasBulanan").value;
+  var tb = document.getElementById("tbodyBulanan"); tb.innerHTML = "";
+  STUDENTS.forEach(function(s){
+    if (kelas && s.kelas !== kelas) return;
+    var r = ringkasBulan(ym, s.nis);
+    var pct = r.total ? Math.round(r.hadir / r.total * 100) : 0;
+    var tr = document.createElement("tr");
+    tr.innerHTML = '<td data-l="Nama"></td><td data-l="Kelas"></td>' +
+      '<td data-l="Hadir" class="num">'+r.hadir+'</td>' +
+      '<td data-l="Terlambat" class="num">'+r.telat+'</td>' +
+      '<td data-l="Sakit" class="num">'+r.sakit+'</td>' +
+      '<td data-l="Izin" class="num">'+r.izin+'</td>' +
+      '<td data-l="Tidak Hadir (Alpa)" class="num">'+r.alpa+'</td>' +
+      '<td data-l="Kehadiran" class="num">'+pct+'%</td>';
+    tr.children[0].textContent = s.nama;
+    tr.children[1].textContent = s.kelas;
+    tb.appendChild(tr);
+  });
+}
+
+/* ================= GURU: SHOLAT DHUHUR ================= */
+var tglSholat = document.getElementById("tglSholat");
+tglSholat.value = keyOf(new Date());
+tglSholat.max = keyOf(new Date());
+tglSholat.addEventListener("change", renderSholat);
+document.getElementById("kelasSholat").addEventListener("change", renderSholat);
+document.getElementById("bulanSholatSel").addEventListener("change", renderSholatBulan);
+document.getElementById("kelasSholatBulan").addEventListener("change", renderSholatBulan);
+
+function barisSholat(dateKey, kelasFilter){
+  var d = parseKey(dateKey), rows = [], counts = {sudah:0, halangan:0, tidak:0, alpa:0, belum:0};
+  var libur = !isSchoolDay(d), masaDepan = dateKey > keyOf(new Date());
+  var tanpaData = !adaDataTanggal(dateKey) && dateKey < keyOf(new Date());
+  STUDENTS.forEach(function(s){
+    if (kelasFilter && s.kelas !== kelasFilter) return;
+    var rec = getRecord(dateKey, s.nis);
+    var st = statusSholat(dateKey, s.nis);
+    if (tanpaData){ rows.push({s:s, rec:rec, st:st, ket:"Belum ada catatan absensi pada tanggal ini."}); return; }
+    if (st === "sudah") counts.sudah++;
+    else if (st === "berhalangan") counts.halangan++;
+    else if (st === "tidak") counts.tidak++;
+    else if (st === "alpa" || st === "sakit" || st === "izin") counts.alpa++;
+    else counts.belum++; /* "belum" maupun null (belum ada catatan) — belum final */
+    var ket = libur ? "Hari libur" : masaDepan ? "Belum berjalan"
+      : st === "sudah" ? "Scan QR di masjid"
+      : st === "berhalangan" ? "Di-scan guru piket yang berkeliling: berhalangan (haid / sakit / izin)"
+      : (st === "sakit" || st === "izin") ? labelAbsen(rec.absen)+" — "+rec.absen.keterangan+" (ditandai wali kelas; tidak hadir di sekolah)"
+      : st === "alpa" ? "Tidak hadir di sekolah (alpa)"
+      : st === "tidak" ? "Hadir di sekolah, sampai waktu scan pulang ("+(jamPulangFor(parseKey(dateKey))||"—")+") tidak scan sholat dan tidak di-scan berhalangan"
+      : st === "belum" ? "Hadir di sekolah, belum scan sholat dan belum di-scan berhalangan — masih Belum Sholat; baru menjadi Tidak Sholat bila sampai waktu scan pulang ("+(jamPulangFor(parseKey(dateKey))||"—")+") tetap belum ada scan"
+      : "Belum ada catatan (hari ini masih berjalan) — Belum Sholat";
+    rows.push({s:s, rec:rec, st:st, ket:ket});
+  });
+  return {rows:rows, counts:counts};
+}
+function labelSholat(st){
+  if (st === "sudah") return '<span class="badge b-ok">✓ Sudah Sholat</span>';
+  if (st === "berhalangan") return '<span class="badge b-info">Berhalangan</span>';
+  if (st === "belum") return '<span class="badge b-none">Belum Sholat</span>';
+  if (st === "tidak") return '<span class="badge b-bad">Tidak Sholat</span>';
+  if (st === "sakit") return '<span class="badge b-warn">Sakit — Tidak Hadir di Sekolah</span>';
+  if (st === "izin") return '<span class="badge b-info">Izin — Tidak Hadir di Sekolah</span>';
+  if (st === "alpa") return '<span class="badge b-bad">Tidak Hadir di Sekolah</span>';
+  return '<span class="badge b-none">Belum Sholat</span>';
+}
+function renderSholat(){
+  var dateKey = tglSholat.value || keyOf(new Date());
+  if (perluAmbil(dateKey, dateKey)) ambilRentang(dateKey, dateKey);
+  var kelas = document.getElementById("kelasSholat").value;
+  var data = barisSholat(dateKey, kelas);
+  document.getElementById("sholatStats").innerHTML =
+    statHtml(data.counts.sudah, "Sudah sholat") + statHtml(data.counts.halangan, "Berhalangan") +
+    statHtml(data.counts.belum, "Belum sholat") + statHtml(data.counts.tidak, "Tidak sholat") +
+    statHtml(data.counts.alpa, "Tidak hadir di sekolah");
+  var tb = document.getElementById("tbodySholat"); tb.innerHTML = "";
+  var bisaTandai = dateKey <= keyOf(new Date()) && isSchoolDay(parseKey(dateKey));
+  data.rows.forEach(function(r){
+    var tr = document.createElement("tr");
+    var aksi = "";
+    if (bisaTandai && r.st === "berhalangan") aksi = '<button type="button" class="btn ghost small" data-batal="'+r.s.nis+'">Batalkan Berhalangan</button>';
+    else aksi = '<span style="color:var(--ink2)">—</span>';
+    tr.innerHTML =
+      '<td data-l="Nama"></td><td data-l="Kelas"></td>' +
+      '<td data-l="Status Sholat Dhuhur">'+labelSholat(r.st)+'</td>' +
+      '<td data-l="Jam Scan" class="mono">'+(r.rec && r.rec.sholatJam ? r.rec.sholatJam : (r.rec && r.rec.halanganJam ? r.rec.halanganJam+" (piket)" : "—"))+'</td>' +
+      '<td data-l="Keterangan"></td>' +
+      '<td data-l="Tindakan Guru">'+aksi+'</td>';
+    tr.children[0].textContent = r.s.nama;
+    tr.children[1].textContent = r.s.kelas;
+    tr.children[4].textContent = r.ket;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("[data-batal]").forEach(function(b){
+    b.addEventListener("click", function(){ batalkanBerhalangan(b.getAttribute("data-batal"), dateKey); });
+  });
+}
+function ringkasSholatBulan(ym, nis){
+  var p = ym.split("-"), y = +p[0], m = +p[1]-1;
+  var todayKey = keyOf(new Date());
+  var sudah=0, halangan=0, tidak=0, alpa=0;
+  var d = new Date(y, m, 1);
+  while (d.getMonth() === m){
+    var k = keyOf(d);
+    if (isSchoolDay(d) && k <= todayKey && adaDataTanggal(k)){
+      var st = statusSholat(k, nis);
+      if (st === "sudah") sudah++;
+      else if (st === "berhalangan") halangan++;
+      else if (st === "tidak") tidak++;
+      else if (st === "alpa" || st === "sakit" || st === "izin") alpa++;
+    }
+    d.setDate(d.getDate()+1);
+  }
+  var dasar = sudah + halangan + tidak;
+  return {sudah:sudah, halangan:halangan, tidak:tidak, alpa:alpa, pct: dasar ? Math.round(sudah/dasar*100) : 0};
+}
+function renderSholatBulan(){
+  var ym = document.getElementById("bulanSholatSel").value;
+  var pS = ym.split("-");
+  if (perluAmbil(ym+"-01", keyOf(new Date(+pS[0], +pS[1], 0)))) ambilRentang(ym+"-01", keyOf(new Date(+pS[0], +pS[1], 0)));
+  var kelas = document.getElementById("kelasSholatBulan").value;
+  var tb = document.getElementById("tbodySholatBulan"); tb.innerHTML = "";
+  STUDENTS.forEach(function(s){
+    if (kelas && s.kelas !== kelas) return;
+    var r = ringkasSholatBulan(ym, s.nis);
+    var tr = document.createElement("tr");
+    tr.innerHTML = '<td data-l="Nama"></td><td data-l="Kelas"></td>' +
+      '<td data-l="Sudah Sholat" class="num">'+r.sudah+'</td>' +
+      '<td data-l="Berhalangan" class="num">'+r.halangan+'</td>' +
+      '<td data-l="Tidak Sholat" class="num">'+r.tidak+'</td>' +
+      '<td data-l="Tidak Hadir di Sekolah" class="num">'+r.alpa+'</td>' +
+      '<td data-l="% Sholat" class="num">'+r.pct+'%</td>';
+    tr.children[0].textContent = s.nama;
+    tr.children[1].textContent = s.kelas;
+    tb.appendChild(tr);
+  });
+}
+
+/* ================= UNDUH CSV ================= */
+function unduhCsv(namaFile, header, rows){
+  var isi = [header.join(",")].concat(rows.map(function(r){
+    return r.map(function(c){ return '"'+String(c).replace(/"/g,'""')+'"'; }).join(",");
+  })).join("\r\n");
+  var blob = new Blob(["\ufeff"+isi], {type:"text/csv;charset=utf-8"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = namaFile;
+  document.body.appendChild(a); a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); a.remove(); }, 400);
+}
+document.getElementById("dlHarian").addEventListener("click", function(){
+  var dateKey = tglHarian.value || keyOf(new Date());
+  var kelas = document.getElementById("kelasHarian").value;
+  var data = barisHarian(dateKey, kelas);
+  unduhCsv("rekap-harian-"+dateKey+".csv",
+    ["Nama","NIS","Kelas","Tanggal","Jam Datang","Status Datang","Sholat Dhuhur","Jam Scan Sholat","Jam Scan Berhalangan (Guru Piket)","Jam Pulang","Keterangan"],
+    data.rows.map(function(r){
+      var ss = statusSholat(dateKey, r.s.nis);
+      return [r.s.nama, r.s.nis, r.s.kelas, dateKey,
+        r.rec && r.rec.masuk ? r.rec.masuk : "",
+        r.absen ? labelAbsen(r.absen) : r.rec && r.rec.alpa ? "Tidak hadir (Alpa)" : r.st==="terlambat" ? "Terlambat" : r.st==="tepat" ? "Tepat waktu" : "",
+        ss==="sudah" ? "Sudah Sholat" : ss==="berhalangan" ? "Berhalangan" : ss==="belum" ? "Belum Sholat" : ss==="tidak" ? "Tidak Sholat" : ss==="alpa" ? "Tidak Hadir di Sekolah" : ss==="sakit" ? "Sakit (Tidak Hadir)" : ss==="izin" ? "Izin (Tidak Hadir)" : "Belum Sholat",
+        r.rec && r.rec.sholatJam ? r.rec.sholatJam : "",
+        r.rec && r.rec.halanganJam ? r.rec.halanganJam : "",
+        r.rec && r.rec.pulang ? r.rec.pulang : "", r.ket];
+    }));
+});
+document.getElementById("dlSholat").addEventListener("click", function(){
+  var dateKey = tglSholat.value || keyOf(new Date());
+  var kelas = document.getElementById("kelasSholat").value;
+  var data = barisSholat(dateKey, kelas);
+  unduhCsv("rekap-sholat-dhuhur-"+dateKey+".csv",
+    ["Nama","NIS","Kelas","Tanggal","Status Sholat Dhuhur","Jam Scan Sholat","Jam Scan Berhalangan (Guru Piket)","Keterangan"],
+    data.rows.map(function(r){
+      return [r.s.nama, r.s.nis, r.s.kelas, dateKey,
+        r.st==="sudah" ? "Sudah Sholat" : r.st==="berhalangan" ? "Berhalangan" : r.st==="belum" ? "Belum Sholat" : r.st==="tidak" ? "Tidak Sholat" : r.st==="sakit" ? "Sakit (Tidak Hadir)" : r.st==="izin" ? "Izin (Tidak Hadir)" : r.st==="alpa" ? "Tidak Hadir di Sekolah" : "Belum Sholat",
+        r.rec && r.rec.sholatJam ? r.rec.sholatJam : "",
+        r.rec && r.rec.halanganJam ? r.rec.halanganJam : "", r.ket];
+    }));
+});
+document.getElementById("dlSholatBulan").addEventListener("click", function(){
+  var ym = document.getElementById("bulanSholatSel").value;
+  var kelas = document.getElementById("kelasSholatBulan").value;
+  var rows = STUDENTS.filter(function(s){ return !kelas || s.kelas===kelas; }).map(function(s){
+    var r = ringkasSholatBulan(ym, s.nis);
+    return [s.nama, s.nis, s.kelas, r.sudah, r.halangan, r.tidak, r.alpa, r.pct+"%"];
+  });
+  unduhCsv("rekap-sholat-bulanan-"+ym+".csv",
+    ["Nama","NIS","Kelas","Sudah Sholat","Berhalangan","Tidak Sholat","Tidak Hadir di Sekolah","% Sholat"], rows);
+});
+document.getElementById("dlMingguan").addEventListener("click", function(){
+  var days = hariMinggu(mingguSel.value);
+  var kelas = document.getElementById("kelasMingguan").value;
+  var rows = [];
+  STUDENTS.forEach(function(s){
+    if (kelas && s.kelas !== kelas) return;
+    var row = [s.nama, s.nis, s.kelas];
+    days.forEach(function(d){ row.push(kodeHari(keyOf(d), s.nis)); });
+    rows.push(row);
+  });
+  unduhCsv("rekap-mingguan-"+mingguSel.value+".csv",
+    ["Nama","NIS","Kelas"].concat(days.map(function(d){ return fmtTglShort(d); })), rows);
+});
+document.getElementById("dlBulanan").addEventListener("click", function(){
+  var ym = document.getElementById("bulanSel").value;
+  var kelas = document.getElementById("kelasBulanan").value;
+  var rows = STUDENTS.filter(function(s){ return !kelas || s.kelas===kelas; }).map(function(s){
+    var r = ringkasBulan(ym, s.nis);
+    return [s.nama, s.nis, s.kelas, r.hadir, r.telat, r.sakit, r.izin, r.alpa, r.total ? Math.round(r.hadir/r.total*100)+"%" : ""];
+  });
+  unduhCsv("rekap-bulanan-"+ym+".csv",
+    ["Nama","NIS","Kelas","Hadir","Terlambat","Sakit","Izin","Tidak Hadir (Alpa)","Kehadiran"], rows);
+});
+
+/* ================= ORANG TUA ================= */
+var ortuNisAktif = null;
+var ortuSelect = document.getElementById("ortuSelect");
+STUDENTS.forEach(function(s){
+  var op = document.createElement("option");
+  op.value = s.nis; op.textContent = s.nama+" — "+s.kelas+" (NIS "+s.nis+")";
+  ortuSelect.appendChild(op);
+});
+document.getElementById("ortuCariBtn").addEventListener("click", function(){
+  cariAnak(document.getElementById("ortuNis").value.replace(/\D/g,""));
+});
+document.getElementById("ortuNis").addEventListener("keydown", function(e){
+  if (e.key === "Enter") cariAnak(e.target.value.replace(/\D/g,""));
+});
+document.getElementById("ortuPilihBtn").addEventListener("click", function(){ cariAnak(ortuSelect.value); });
+function cariAnak(nis){
+  var err = document.getElementById("ortuErr");
+  var s = studentByNis(nis);
+  if (!s){
+    err.textContent = nis ? "NIS "+nis+" tidak ditemukan pada daftar siswa. Periksa NIS-nya, atau pilih nama pada daftar."
+                          : "Masukkan NIS anak terlebih dahulu, atau pilih nama pada daftar.";
+    document.getElementById("ortuHasil").classList.add("hidden");
+    ortuNisAktif = null; return;
+  }
+  err.textContent = "";
+  renderOrtu(s);
+}
+function barisRiwayat(dateKey, nis){
+  var d = parseKey(dateKey);
+  var rec = getRecord(dateKey, nis);
+  var abs = (rec && rec.absen && !rec.masuk) ? rec.absen : null;
+  var status = !isSchoolDay(d) ? "Libur"
+    : dateKey > keyOf(new Date()) ? "Belum berjalan"
+    : abs ? labelAbsen(abs)
+    : rec && rec.alpa ? "Tidak hadir"
+    : rec && rec.masuk ? (statusDatang(rec) === "terlambat" ? "Terlambat" : "Tepat waktu")
+    : "Belum ada catatan";
+  var ss = statusSholat(dateKey, nis);
+  var sholat = !isSchoolDay(d) ? "Libur"
+    : dateKey > keyOf(new Date()) ? "Belum berjalan"
+    : ss === "sudah" ? "Sudah Sholat"
+    : ss === "berhalangan" ? "Berhalangan"
+    : ss === "belum" ? "Belum Sholat"
+    : ss === "tidak" ? "Tidak Sholat"
+    : ss === "sakit" ? "Sakit"
+    : ss === "izin" ? "Izin"
+    : ss === "alpa" ? "Tidak hadir"
+    : "Belum Sholat";
+  return {tgl: fmtTglShort(d), masuk: rec && rec.masuk ? rec.masuk : "—",
+          pulang: rec && rec.pulang ? rec.pulang : "—", status: status,
+          ketAbsen: abs ? abs.keterangan : "",
+          sholat: sholat, sholatJam: rec && rec.sholatJam ? rec.sholatJam : ""};
+}
+function tabelRiwayat(judul, rows){
+  var html = "<h3>"+judul+"</h3><div class='tablewrap'><table class='stack-table'><thead><tr>" +
+    "<th>Tanggal</th><th>Jam Datang</th><th>Status</th><th>Sholat Dhuhur</th><th>Jam Pulang</th></tr></thead><tbody>";
+  rows.forEach(function(r){
+    var cls = r.status==="Tepat waktu" ? "b-ok" : r.status==="Terlambat" ? "b-warn"
+            : r.status==="Sakit" ? "b-warn" : r.status==="Izin" ? "b-info"
+            : r.status==="Tidak hadir" ? "b-bad" : "b-none";
+    var clsS = r.sholat==="Sudah Sholat" ? "b-ok" : r.sholat==="Berhalangan" ? "b-info"
+            : r.sholat==="Sakit" ? "b-warn" : r.sholat==="Izin" ? "b-info"
+            : r.sholat==="Belum Sholat" ? "b-none"
+            : r.sholat==="Tidak Sholat" ? "b-bad" : "b-none";
+    html += '<tr><td data-l="Tanggal">'+r.tgl+'</td><td data-l="Jam Datang" class="mono">'+r.masuk+'</td>' +
+            '<td data-l="Status"><span class="badge '+cls+'">'+r.status+'</span>'+(r.ketAbsen ? ' '+escHtml(r.ketAbsen) : '')+'</td>' +
+            '<td data-l="Sholat Dhuhur"><span class="badge '+clsS+'">'+r.sholat+(r.sholatJam ? " "+r.sholatJam : "")+'</span></td>' +
+            '<td data-l="Jam Pulang" class="mono">'+r.pulang+'</td></tr>';
+  });
+  return html + "</tbody></table></div>";
+}
+function renderOrtu(s){
+  ortuNisAktif = s.nis;
+  var todayKey = keyOf(new Date());
+  var rec = getRecord(todayKey, s.nis);
+  var st = statusDatang(rec);
+  var ssToday = statusSholat(todayKey, s.nis);
+  var boxDatang, boxPulang, boxSholat;
+  if (ssToday === "sudah"){
+    boxSholat = '<div class="big-status done"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+      '<div class="val">✓ Sudah sholat</div><div class="jam">Pukul '+(rec.sholatJam || JAM_SHOLAT)+' WIB</div>' +
+      '<div>Anak tercatat sholat dhuhur berjamaah di masjid sekolah.</div></div>';
+  } else if (ssToday === "berhalangan"){
+    boxSholat = '<div class="big-status"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+      '<div class="val">Berhalangan</div>' +
+      (rec.halanganJam ? '<div class="jam">Di-scan guru piket pukul '+rec.halanganJam+' WIB</div>' : '') +
+      '<div>Kartu anak di-scan guru piket yang berkeliling sebagai berhalangan sholat (misalnya haid / sakit / izin) — tercatat Berhalangan, bukan Tidak Sholat.</div></div>';
+  } else if (ssToday === "belum"){
+    boxSholat = '<div class="big-status"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+      '<div class="val">Belum sholat</div><div>Anak sudah datang, tetapi belum tercatat scan sholat dhuhur dan belum di-scan berhalangan. Status ini baru berubah menjadi Tidak Sholat bila sampai waktunya scan Pulang (pukul '+jamPulangHariIni()+' WIB) tetap belum ada scan sholat maupun berhalangan.</div></div>';
+  } else if (ssToday === "tidak"){
+    boxSholat = '<div class="big-status none"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+      '<div class="val">Tidak sholat</div><div>Sudah sampai waktunya scan Pulang, tetapi anak tidak tercatat scan sholat dhuhur dan tidak berhalangan.</div></div>';
+  } else if (ssToday === "sakit" || ssToday === "izin"){
+    boxSholat = '<div class="big-status"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+      '<div class="val">Tidak hadir di sekolah ('+labelAbsen(rec.absen)+')</div><div>Tidak ada catatan sholat karena anak '+labelAbsen(rec.absen).toLowerCase()+' — '+escHtml(rec.absen.keterangan)+' (ditandai wali kelas).</div></div>';
+  } else if (ssToday === "alpa"){
+    boxSholat = '<div class="big-status none"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+      '<div class="val">Tidak hadir di sekolah</div><div>Tidak ada catatan sholat karena anak tidak hadir.</div></div>';
+  } else {
+    var jpOrtu = jamPulangHariIni();
+    boxSholat = jpOrtu
+      ? '<div class="big-status"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+        '<div class="val">Belum sholat</div><div>Sholat dhuhur tercatat setelah QR anak dipindai saat keluar masjid; bila berhalangan, kartu anak di-scan guru piket yang berkeliling sebagai Berhalangan. Status baru menjadi Tidak Sholat bila sampai waktunya scan Pulang (pukul '+jpOrtu+' WIB) tetap belum ada scan.</div></div>'
+      : '<div class="big-status"><div class="cap">SHOLAT DHUHUR — HARI INI</div>' +
+        '<div class="val">Libur</div><div>Hari ini libur (Sabtu/Minggu), tidak ada kegiatan sekolah.</div></div>';
+  }
+  if (rec && rec.absen && !rec.masuk){
+    boxDatang = '<div class="big-status '+(rec.absen.jenis==="sakit" ? "late" : "")+'">' +
+      '<div class="cap">DATANG — HARI INI</div><div class="val">'+(rec.absen.jenis==="sakit" ? "Sakit" : "Izin")+' — tidak masuk sekolah</div>' +
+      '<div>Keterangan dari wali kelas: <b>'+escHtml(rec.absen.keterangan)+'</b>. Anak tidak dihitung alpa pada hari ini.</div></div>';
+  } else if (rec && rec.masuk){
+    boxDatang = '<div class="big-status '+(st==="terlambat"?"late":"done")+'">' +
+      '<div class="cap">DATANG — HARI INI</div><div class="val">✓ Sudah datang</div>' +
+      '<div class="jam">Pukul '+rec.masuk+' WIB</div>' +
+      '<div>'+(st==="terlambat" ? "Status: <b>Terlambat</b> (batas tepat waktu "+JADWAL.batasTerlambat+")" : "Status: <b>Tepat Waktu</b>")+'</div></div>';
+  } else {
+    boxDatang = '<div class="big-status none"><div class="cap">DATANG — HARI INI</div>' +
+      '<div class="val">Belum ada catatan datang</div><div>QR anak belum dipindai di gerbang pada hari ini.</div></div>';
+  }
+  if (rec && rec.pulang){
+    boxPulang = '<div class="big-status done"><div class="cap">PULANG — HARI INI</div>' +
+      '<div class="val">✓ Sudah pulang</div><div class="jam">Pukul '+rec.pulang+' WIB</div>' +
+      '<div>Anak tercatat meninggalkan sekolah pada jam tersebut.</div></div>';
+  } else {
+    var jpPulang = jamPulangHariIni();
+    boxPulang = jpPulang
+      ? '<div class="big-status"><div class="cap">PULANG — HARI INI</div>' +
+        '<div class="val">Belum pulang / belum scan pulang</div>' +
+        '<div>Kepulangan tercatat setelah QR dipindai, mulai pukul '+jpPulang+' WIB.</div></div>'
+      : '<div class="big-status"><div class="cap">PULANG — HARI INI</div>' +
+        '<div class="val">Libur</div><div>Hari ini libur (Sabtu/Minggu), tidak ada kegiatan sekolah.</div></div>';
+  }
+  /* Minggu ini: Senin–Jumat pada minggu berjalan */
+  var now = new Date(), senin = new Date(now);
+  senin.setDate(now.getDate() - ((now.getDay()+6) % 7));
+  var rowsMinggu = [];
+  for (var i=0;i<5;i++){ var d = new Date(senin); d.setDate(senin.getDate()+i); rowsMinggu.push(barisRiwayat(keyOf(d), s.nis)); }
+  /* Bulan ini: semua hari sekolah yang sudah berjalan */
+  var rowsBulan = [], d2 = new Date(now.getFullYear(), now.getMonth(), 1);
+  while (d2 <= now){ if (isSchoolDay(d2)) rowsBulan.push(barisRiwayat(keyOf(d2), s.nis)); d2.setDate(d2.getDate()+1); }
+  var ymNow = now.getFullYear()+"-"+pad(now.getMonth()+1);
+  var rb = ringkasBulan(ymNow, s.nis);
+  var rs = ringkasSholatBulan(ymNow, s.nis);
+
+  var inisial = s.nama.split(" ").map(function(w){ return w[0]; }).slice(0,2).join("");
+  document.getElementById("ortuHasil").innerHTML =
+    '<div class="card"><div class="child-head"><div class="avatar">'+inisial+'</div>' +
+    '<div><div style="font-weight:800;font-size:1.15rem">'+s.nama+'</div>' +
+    '<div style="color:var(--ink2)">Kelas '+s.kelas+' · NIS <span class="mono">'+s.nis+'</span> · SMP Negeri 2 Kebonagung</div></div></div>' +
+    '<div class="today-grid3">'+boxDatang+boxSholat+boxPulang+'</div>' +
+    '<p style="margin:0 0 6px">Ringkasan kehadiran bulan ini: hadir <b>'+rb.hadir+' hari</b>, terlambat <b>'+rb.telat+' kali</b>, sakit <b>'+rb.sakit+' hari</b>, izin <b>'+rb.izin+' hari</b>, tidak hadir tanpa keterangan (alpa) <b>'+rb.alpa+' hari</b> dari '+rb.total+' hari sekolah yang sudah berjalan.</p>' +
+    '<p style="margin:0">Ringkasan sholat dhuhur bulan ini: sudah sholat <b>'+rs.sudah+' kali</b>, berhalangan <b>'+rs.halangan+' kali</b>, tidak sholat <b>'+rs.tidak+' kali</b>.</p></div>' +
+    tabelRiwayat("Riwayat Minggu Ini", rowsMinggu) +
+    tabelRiwayat("Riwayat Bulan Ini ("+now.toLocaleDateString("id-ID",{month:"long", year:"numeric"})+")", rowsBulan) +
+    '<p class="lead" style="margin-top:12px">Data di atas berasal dari scan QR dan penandaan wali kelas. Halaman ini hanya menampilkan data anak yang dicari dan tidak dapat mengubah catatan absensi.</p>';
+  document.getElementById("ortuHasil").classList.remove("hidden");
+}
+
+/* ================= KARTU QR ================= */
+var kelasKartuSel = null;
+function renderKartu(){
+  var grid = document.getElementById("cardGrid");
+  grid.innerHTML = "";
+  var kelas = kelasKartuSel ? kelasKartuSel.value : "";
+  STUDENTS.forEach(function(s){
+    if (kelas && s.kelas !== kelas) return;
+    var div = document.createElement("div");
+    div.className = "idcard";
+    div.setAttribute("data-nis", s.nis);
+    div.innerHTML = '<div class="sch">KARTU SISWA · SMP NEGERI 2 KEBONAGUNG</div>' +
+      '<div class="nm"></div><div class="meta"></div><div class="qr"></div>' +
+      '<div class="nis">NIS '+s.nis+'</div>' +
+      '<button type="button" class="btn dl-one no-print">⬇ Unduh Kartu Ini (PNG)</button>';
+    div.querySelector(".nm").textContent = s.nama;
+    div.querySelector(".meta").textContent = "Kelas "+s.kelas;
+    div.querySelector(".dl-one").addEventListener("click", function(){ unduhKartuSatu(s); });
+    grid.appendChild(div);
+    try {
+      new QRCode(div.querySelector(".qr"), {text: s.qr || s.nis, width: 120, height: 120, correctLevel: QRCode.CorrectLevel.M});
+    } catch(e){
+      div.querySelector(".qr").textContent = "NIS "+s.nis;
+    }
+  });
+}
+(function(){
+  /* Filter kelas untuk kartu (402 kartu tidak dirender sekaligus agar ringan di HP). */
+  var toolbar = document.createElement("div");
+  toolbar.className = "toolbar";
+  toolbar.innerHTML = '<label>Kelas <select id="kelasKartu"></select></label><span class="lead" style="margin:0">Pilih kelas untuk menampilkan kartunya.</span>';
+  var grid = document.getElementById("cardGrid");
+  grid.parentNode.insertBefore(toolbar, grid);
+  kelasKartuSel = document.getElementById("kelasKartu");
+  var op0 = document.createElement("option"); op0.value = ""; op0.textContent = "Semua kelas"; kelasKartuSel.appendChild(op0);
+  KELAS_LIST.forEach(function(k){ var op = document.createElement("option"); op.value = k; op.textContent = k; kelasKartuSel.appendChild(op); });
+  kelasKartuSel.value = "7A";
+  kelasKartuSel.addEventListener("change", renderKartu);
+  renderKartu();
+})();
+
+/* ================= UNDUH / CETAK KARTU ================= */
+function qrImageFor(nis){
+  return new Promise(function(resolve){
+    var card = document.querySelector('.idcard[data-nis="'+nis+'"]');
+    var img = card ? card.querySelector(".qr img") : null;
+    var canvas = card ? card.querySelector(".qr canvas") : null;
+    var src = null;
+    if (img && img.src) src = img.src;
+    else if (canvas){ try { src = canvas.toDataURL("image/png"); } catch(e){} }
+    if (!src){ resolve(null); return; }
+    var im = new Image();
+    im.onload = function(){ resolve(im); };
+    im.onerror = function(){ resolve(null); };
+    im.src = src;
+  });
+}
+function gambarKartu(ctx, x, y, w, h, s, qrImg){
+  ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, w, h);
+  ctx.strokeStyle = "#43617d"; ctx.lineWidth = Math.max(3, w*0.008); ctx.strokeRect(x+4, y+4, w-8, h-8);
+  ctx.fillStyle = "#2f485f"; ctx.textAlign = "center";
+  ctx.font = "700 "+Math.round(h*0.055)+"px 'Plus Jakarta Sans', sans-serif";
+  ctx.fillText("KARTU SISWA · SMP NEGERI 2 KEBONAGUNG", x+w/2, y+h*0.13);
+  ctx.fillStyle = "#1c2b36";
+  ctx.font = "800 "+Math.round(h*0.085)+"px 'Plus Jakarta Sans', sans-serif";
+  var nama = s.nama;
+  while (ctx.measureText(nama).width > w*0.92 && nama.length > 4) nama = nama.slice(0, -2);
+  if (nama !== s.nama) nama += "…";
+  ctx.fillText(nama, x+w/2, y+h*0.27);
+  ctx.fillStyle = "#54687a";
+  ctx.font = "600 "+Math.round(h*0.06)+"px 'Plus Jakarta Sans', sans-serif";
+  ctx.fillText("Kelas "+s.kelas, x+w/2, y+h*0.37);
+  var qs = h*0.42;
+  if (qrImg) ctx.drawImage(qrImg, x+(w-qs)/2, y+h*0.42, qs, qs);
+  ctx.fillStyle = "#1c2b36";
+  ctx.font = "600 "+Math.round(h*0.065)+"px 'IBM Plex Mono', monospace";
+  ctx.fillText("NIS "+s.nis, x+w/2, y+h*0.95);
+}
+function simpanCanvas(canvas, namaFile, pesan){
+  var status = document.getElementById("cardDlStatus");
+  try {
+    var a = document.createElement("a");
+    a.href = canvas.toDataURL("image/png"); a.download = namaFile;
+    document.body.appendChild(a); a.click(); a.remove();
+    if (status) status.textContent = pesan;
+  } catch(e){
+    if (status) status.textContent = "Unduhan gambar kartu gagal di perangkat ini. Cara lain: ketuk Cetak Semua Kartu, atau tangkap layar kartu yang diinginkan.";
+  }
+}
+function unduhKartuSatu(s){
+  qrImageFor(s.nis).then(function(qrImg){
+    var c = document.createElement("canvas"); c.width = 1000; c.height = 620;
+    gambarKartu(c.getContext("2d"), 0, 0, 1000, 620, s, qrImg);
+    simpanCanvas(c, "kartu-siswa-"+s.nis+"-"+s.nama.toLowerCase().replace(/[^a-z0-9]+/g,"-")+".png",
+      "✓ Kartu "+s.nama+" (NIS "+s.nis+") terunduh sebagai PNG. Buka gambarnya di HP/perangkat lain, lalu pindai QR-nya dari halaman Scan Absensi.");
+  });
+}
+document.getElementById("dlAllCardsBtn").addEventListener("click", function(){
+  var status = document.getElementById("cardDlStatus");
+  var kelas = kelasKartuSel ? kelasKartuSel.value : "";
+  if (!kelas){ if (status) status.textContent = "Pilih dulu satu kelas di atas, lalu unduh lembar kartu kelas itu (402 kartu terlalu banyak untuk satu lembar)."; return; }
+  var daftar = STUDENTS.filter(function(s){ return s.kelas === kelas; });
+  if (status) status.textContent = "Menyiapkan lembar berisi "+daftar.length+" kartu kelas "+kelas+"…";
+  var janji = daftar.map(function(s){ return qrImageFor(s.nis); });
+  Promise.all(janji).then(function(imgs){
+    var cols = 3, cw = 780, ch = 484, gap = 30, padL = 40;
+    var rows = Math.ceil(daftar.length / cols);
+    var c = document.createElement("canvas");
+    c.width = padL*2 + cols*cw + (cols-1)*gap;
+    c.height = padL*2 + rows*ch + (rows-1)*gap;
+    var ctx = c.getContext("2d");
+    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height);
+    daftar.forEach(function(s, i){
+      var x = padL + (i % cols) * (cw + gap);
+      var y = padL + Math.floor(i / cols) * (ch + gap);
+      gambarKartu(ctx, x, y, cw, ch, s, imgs[i]);
+    });
+    simpanCanvas(c, "kartu-siswa-kelas-"+kelas+".png",
+      "✓ Satu lembar PNG berisi "+daftar.length+" kartu kelas "+kelas+" terunduh. Cetak lembar itu atau tampilkan di perangkat lain, lalu pindai tiap QR dari halaman Scan Absensi.");
+  });
+});
+/* Mencetak: gunakan menu Cetak peramban/HP — CSS @media print di atas membuat yang
+   tercetak hanya kartu-kartunya (2 per baris), tanpa header dan navigasi. */
+
+/* ================= PEMINDAI KAMERA ================= */
+var camStream = null, camRaf = 0, camDetector = null, camBusy = false;
+var camTerakhir = {teks:"", kapan:0};
+var camVideo = document.getElementById("camVideo");
+var camCanvas = document.getElementById("camCanvas");
+var camStatusEl = document.getElementById("camStatus");
+function camStatus(teks, salah){
+  camStatusEl.textContent = teks;
+  camStatusEl.classList.toggle("err", !!salah);
+}
+var _audioCtx = null;
+function bunyiScan(){
+  try {
+    if (!_audioCtx) _audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (_audioCtx.state === "suspended") _audioCtx.resume();
+    var o = _audioCtx.createOscillator(), g = _audioCtx.createGain();
+    o.type = "sine"; o.frequency.value = 1180; g.gain.value = 0.12;
+    o.connect(g); g.connect(_audioCtx.destination);
+    o.start(); o.stop(_audioCtx.currentTime + 0.12);
+  } catch(e){ /* bunyi hanya pelengkap */ }
+}
+function hasilPindai(teksMentah){
+  var sekarang = Date.now();
+  if (teksMentah === camTerakhir.teks && sekarang - camTerakhir.kapan < 3000) return;
+  camTerakhir = {teks: teksMentah, kapan: sekarang};
+  var cocok = String(teksMentah).match(/\d{3,}/);
+  var nis = cocok ? cocok[0] : String(teksMentah).replace(/\D/g,"");
+  var s = studentByNis(nis);
+  if (!s){
+    camStatus("QR terbaca (isi: "+teksMentah+"), tetapi NIS "+(nis || "—")+" tidak ada pada daftar siswa. Tidak ada yang dicatat.", true);
+    return;
+  }
+  bunyiScan();
+  camStatus("✓ QR terbaca: "+s.nama+" · "+s.kelas+" · NIS "+s.nis+" — mencatat sebagai "+MODE_INFO[scanMode].label+"…");
+  doScan(nis);
+}
+function lingkarPindai(){
+  if (!camStream) return;
+  if (!camBusy && camVideo.readyState >= 2){
+    camBusy = true;
+    var selesai = function(){ camBusy = false; };
+    if (camDetector){
+      camDetector.detect(camVideo).then(function(kodes){
+        if (kodes && kodes.length && kodes[0].rawValue) hasilPindai(kodes[0].rawValue);
+        selesai();
+      }).catch(selesai);
+    } else if (typeof jsQR !== "undefined"){
+      try {
+        var w = camVideo.videoWidth, h = camVideo.videoHeight;
+        if (w && h){
+          camCanvas.width = w; camCanvas.height = h;
+          var ctx = camCanvas.getContext("2d", {willReadFrequently:true});
+          ctx.drawImage(camVideo, 0, 0, w, h);
+          var data = ctx.getImageData(0, 0, w, h);
+          var kode = jsQR(data.data, w, h, {inversionAttempts:"dontInvert"});
+          if (kode && kode.data) hasilPindai(kode.data);
+        }
+      } catch(e){ /* abaikan bingkai yang gagal dibaca */ }
+      selesai();
+    } else {
+      selesai();
+    }
+  }
+  camRaf = requestAnimationFrame(lingkarPindai);
+}
+function matikanKamera(pesan){
+  if (camRaf) cancelAnimationFrame(camRaf);
+  camRaf = 0;
+  if (camStream){ camStream.getTracks().forEach(function(t){ t.stop(); }); camStream = null; }
+  camVideo.classList.add("hidden");
+  document.getElementById("camFrame").classList.add("hidden");
+  document.getElementById("camIdle").classList.remove("hidden");
+  document.getElementById("camStartBtn").classList.remove("hidden");
+  document.getElementById("camStopBtn").classList.add("hidden");
+  if (pesan) camStatus(pesan);
+}
+document.getElementById("camStopBtn").addEventListener("click", function(){
+  matikanKamera("Kamera dimatikan. Cara cadangan tetap tersedia: ketuk nama siswa atau ketik NIS di bawah.");
+});
+document.getElementById("camStartBtn").addEventListener("click", function(){
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
+    camStatus("Peramban ini tidak menyediakan akses kamera (getUserMedia tidak tersedia). Buka halaman ini lewat https di Chrome/Edge/Safari terbaru, atau pakai cara cadangan: ketuk nama siswa / ketik NIS.", true);
+    return;
+  }
+  camStatus("Meminta izin kamera…");
+  navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}, audio:false}).then(function(stream){
+    camStream = stream;
+    camVideo.srcObject = stream;
+    camVideo.classList.remove("hidden");
+    document.getElementById("camFrame").classList.remove("hidden");
+    document.getElementById("camIdle").classList.add("hidden");
+    document.getElementById("camStartBtn").classList.add("hidden");
+    document.getElementById("camStopBtn").classList.remove("hidden");
+    return camVideo.play();
+  }).then(function(){
+    camDetector = null;
+    if ("BarcodeDetector" in window){
+      try { camDetector = new BarcodeDetector({formats:["qr_code"]}); } catch(e){ camDetector = null; }
+    }
+    camStatus("Kamera menyala — mode aktif: "+MODE_INFO[scanMode].label+". Arahkan QR Kartu Siswa ke dalam kotak.");
+    lingkarPindai();
+  }).catch(function(err){
+    var nama = err && err.name ? err.name : "";
+    if (nama === "NotAllowedError" || nama === "SecurityError")
+      camStatus("Izin kamera ditolak. Ubah lewat Chrome > titik tiga > Setelan > Setelan situs > Kamera, cari masgurubudi.github.io, pilih Izinkan, lalu ketuk Nyalakan Kamera lagi.", true);
+    else if (nama === "NotFoundError" || nama === "OverconstrainedError")
+      camStatus("Tidak ditemukan kamera pada perangkat ini. Pakai perangkat lain yang berkamera, atau cara cadangan: ketuk nama siswa / ketik NIS.", true);
+    else if (nama === "NotReadableError")
+      camStatus("Kamera sedang dipakai aplikasi lain. Tutup aplikasi itu dulu, lalu coba lagi.", true);
+    else
+      camStatus("Kamera gagal dinyalakan ("+(nama || "galat tidak dikenal")+"). Pastikan halaman dibuka lewat https, lalu coba lagi — atau pakai cara cadangan di bawah.", true);
+    matikanKamera();
+    camStatusEl.classList.add("err");
+  });
+});
+
+initFirebase();
+muatDariIDB().then(function(){
+  bangunFeedHariIni();
+  isiPilihanBulan();
+  renderScan();
+  muatJadwal();
+  pasangListenerBulan();
+  kirimAntrean();
+  kirimJadwalTertunda();
+  perbaruiBadgeSinkron();
+  if ("serviceWorker" in navigator){ navigator.serviceWorker.register("./sw.js").catch(function(){}); }
+});
+window.addEventListener("online", function(){ muatJadwal(); pasangListenerBulan(); kirimAntrean(); kirimJadwalTertunda(); perbaruiBadgeSinkron(); });
+window.addEventListener("offline", function(){ perbaruiBadgeSinkron(); });
+</script>
+</body>
+</html>
