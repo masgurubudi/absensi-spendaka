@@ -334,14 +334,14 @@
     <button type="button" class="btn ghost small no-print" style="margin:14px 0 4px" data-ke-beranda>&larr; Beranda</button>
     <div id="pinGate" class="card pinbox">
       <h2>Halaman Guru</h2>
-      <p class="lead" style="margin-left:auto;margin-right:auto">Masukkan PIN untuk membuka rekap absensi dan pengaturan jadwal.</p>
+      <p class="lead" style="margin-left:auto;margin-right:auto">Masukkan PIN untuk membuka rekap absensi.</p>
       <input id="pinInput" type="password" inputmode="numeric" maxlength="6" placeholder="PIN" aria-label="PIN guru" />
       <p class="err" id="pinErr"></p>
       <button class="btn" id="pinBtn" style="width:100%">Buka Rekap</button>
     </div>
     <div id="guruPanel" class="hidden">
       <h2>Rekap Absensi</h2>
-      <p class="lead">Data 402 siswa kelas 7A&ndash;7D, 8A&ndash;8E, dan 9A&ndash;9D (TP 2026/2027). Rekap Datang &amp; Pulang ada di tab Harian, Mingguan, dan Bulanan; rekap Sholat Dhuhur ada di tab tersendiri; aturan jam (masuk, batas terlambat, pulang per hari) dapat diubah di tab Pengaturan. Tombol unduh menghasilkan file CSV yang bisa dibuka dan diolah di Excel atau Google Sheets, sama seperti rekap spreadsheet.</p>
+      <p class="lead">Data 402 siswa kelas 7A&ndash;7D, 8A&ndash;8E, dan 9A&ndash;9D (TP 2026/2027). Rekap Datang &amp; Pulang ada di tab Harian, Mingguan, dan Bulanan; rekap Sholat Dhuhur ada di tab tersendiri; aturan jam (masuk, batas terlambat, pulang per hari) hanya dapat diubah oleh super admin di halaman Kartu &amp; QR. Tombol unduh menghasilkan file CSV yang bisa dibuka dan diolah di Excel atau Google Sheets, sama seperti rekap spreadsheet.</p>
 
       <div class="card" style="margin-bottom:18px">
         <h3 style="margin-top:0">Tandai Sakit / Izin — oleh Wali Kelas</h3>
@@ -491,6 +491,7 @@
     <button type="button" class="btn ghost small no-print" style="margin:14px 0 4px" data-ke-beranda>&larr; Beranda</button>
     <h2>Kartu Siswa &amp; Kode QR — Unduh &amp; Cetak di Sini</h2>
     <p class="lead">Di sinilah kartu per siswa berada: <b>402 kartu siswa</b>, satu kartu untuk tiap siswa. QR pada kartu berisi kode yang sama dengan Kartu Siswa yang sudah dicetak (format NIS-NAMA), sehingga kartu yang dicetak dari sini dapat dipindai seperti kartu aslinya. QR yang sama dipakai untuk keempat absensi: datang di gerbang, sholat dhuhur di masjid, scan berhalangan oleh guru piket, dan pulang di gerbang — yang membedakan catatannya adalah mode yang dipilih petugas saat memindai, bukan QR-nya.</p>
+    <p class="lead">Pengaturan jadwal aplikasi (jam masuk, batas terlambat, jam pulang per hari) ada di bagian bawah halaman ini — hanya super admin yang dapat mengubahnya.</p>
     <div class="note no-print"><b>Cara mencoba scan dari HP lain:</b> (1) ketuk <b>⬇ Unduh Kartu Ini (PNG)</b> pada satu kartu di bawah — gambar kartu tersimpan di HP dan bisa dibuka di perangkat lain atau dikirim ke HP kedua; atau pilih kelas di atas lalu ketuk <b>⬇ Unduh Kartu Kelas Ini (1 PNG)</b> untuk satu lembar berisi kartu-kartu kelas itu sekaligus; atau cetak lewat menu <b>Cetak</b> pada peramban/HP — halaman ini sudah diatur agar yang tercetak hanya kartu-kartunya, 2 kartu per baris. (2) Buka halaman <b>Scan Absensi</b>, pilih mode, ketuk <b>Nyalakan Kamera</b>, lalu arahkan kamera ke QR pada kartu yang tercetak / tampil di perangkat lain.</div>
     <div class="toolbar no-print">
       <button type="button" class="btn gold" id="dlAllCardsBtn">⬇ Unduh Kartu Kelas Ini (1 PNG)</button>
@@ -507,7 +508,7 @@
 "use strict";
 /* ================= DATA SISWA ================= */
 var STUDENTS = (window.ROSTER || []).slice(); /* daftar siswa asli, dimuat dari roster.js */
-/* ============ ATURAN JADWAL — dapat diubah di tab Pengaturan (tersimpan di Firestore config/jadwal) ============
+/* ============ ATURAN JADWAL — dapat diubah di halaman Kartu & QR oleh super admin (tersimpan di Firestore config/jadwal) ============
    Jam masuk 07.00 — RESMI (dikonfirmasi Mas Budi).
    Batas terlambat: scan Datang lewat 07.00 = Terlambat — RESMI (dikonfirmasi Mas Budi 13 Nov 10.31 WIB).
    Jam pulang per hari (1=Senin .. 5=Jumat; 0=Minggu dan 6=Sabtu libur):
@@ -1011,20 +1012,19 @@ function simpanJadwal(){
     if (st) st.textContent = "Jadwal tersimpan di HP ini, belum terkirim (offline) — akan terkirim otomatis saat internet kembali.";
   }
 }
-function buatTabPengaturan(){
-  var tabs = document.querySelector(".subtabs");
-  if (!tabs || document.querySelector('[data-rekap="pengaturan"]')) return;
-  var b = document.createElement("button");
-  b.type = "button"; b.setAttribute("role","tab"); b.setAttribute("aria-selected","false");
-  b.setAttribute("data-rekap","pengaturan"); b.textContent = "⚙️ Pengaturan";
-  tabs.appendChild(b);
-  b.addEventListener("click", function(){ isiFormPengaturan(); });
+/* Pengaturan Jadwal tinggal di halaman Kartu & QR (khusus super admin, PIN 112233),
+   bukan lagi tab di Rekap Guru. Form dan ID elemennya sama seperti sebelumnya,
+   sehingga isiFormPengaturan() dan simpanJadwal() (Firestore config/jadwal) tidak berubah. */
+function buatPengaturanAdmin(){
+  if (document.getElementById("pengaturan-admin")) return;
+  var kartu = document.getElementById("view-kartu");
+  if (!kartu) return;
   var div = document.createElement("div");
-  div.id = "rekap-pengaturan"; div.className = "hidden";
+  div.id = "pengaturan-admin";
   div.innerHTML =
     '<div class="card" style="margin-bottom:18px">' +
-    '<h3 style="margin-top:0">Pengaturan Jadwal</h3>' +
-    '<p class="lead">Aturan jam di bawah ini berlaku untuk <b>semua HP guru</b> karena tersimpan di server (Firestore config/jadwal), bukan di perangkat ini saja. Bila offline, dipakai aturan terakhir yang tersimpan di HP ini; begitu online, diambil yang terbaru. Perubahan hanya berlaku untuk scan <b>sesudah</b> perubahan — catatan yang sudah tersimpan tidak diubah.</p>' +
+    '<h3 style="margin-top:0">⚙️ Pengaturan Jadwal</h3>' +
+    '<p class="lead">Aturan jam di bawah ini berlaku untuk <b>semua HP guru</b> karena tersimpan di server (Firestore config/jadwal), bukan di perangkat ini saja. Halaman ini khusus <b>super admin</b> — hanya pemegang PIN super admin yang dapat mengubahnya. Bila offline, dipakai aturan terakhir yang tersimpan di HP ini; begitu online, diambil yang terbaru. Perubahan hanya berlaku untuk scan <b>sesudah</b> perubahan — catatan yang sudah tersimpan tidak diubah.</p>' +
     '<div class="flash" id="setFlash" role="status"></div>' +
     '<div class="toolbar">' +
     '<label>Jam masuk <input type="time" id="setJamMasuk" value="07:00"></label>' +
@@ -1041,9 +1041,9 @@ function buatTabPengaturan(){
     '<button class="btn gold" id="setSimpanBtn" type="button">Simpan Jadwal</button>' +
     '<p class="cam-status" id="setStatus" role="status"></p>' +
     '</div>';
-  var sholatDiv = document.getElementById("rekap-sholat");
-  sholatDiv.parentNode.insertBefore(div, sholatDiv.nextSibling);
+  kartu.appendChild(div);
   document.getElementById("setSimpanBtn").addEventListener("click", simpanJadwal);
+  isiFormPengaturan();
 }
 
 /* ---------- Lencana status sinkronisasi (teks, bukan hanya warna) ---------- */
@@ -1060,7 +1060,7 @@ function buatTabPengaturan(){
     p2.textContent = "Memeriksa status sinkronisasi…";
     h2g.parentNode.insertBefore(p2, h2g.nextSibling);
   }
-  buatTabPengaturan();
+  buatPengaturanAdmin();
 })();
 
 /* ---------- Pilihan bulan dinamis (bulan berjalan + 2 bulan sebelumnya) ---------- */
@@ -1268,7 +1268,7 @@ function statusDatang(rec){
   if (rec.alpa) return "alpa";
   if (!rec.masuk) return null;
   /* Status Terlambat/Tepat dicatat bersama scan Datang (rec.terlambat), sehingga perubahan
-     batas terlambat di Pengaturan tidak mengubah status catatan yang sudah tersimpan. */
+     batas terlambat di Pengaturan Jadwal tidak mengubah status catatan yang sudah tersimpan. */
   if (typeof rec.terlambat === "boolean") return rec.terlambat ? "terlambat" : "tepat";
   return rec.masuk > JADWAL.batasTerlambat ? "terlambat" : "tepat";
 }
@@ -1564,7 +1564,7 @@ rekapBtns.forEach(function(b){
   b.addEventListener("click", function(){
     rekapBtns.forEach(function(x){ x.setAttribute("aria-selected","false"); });
     b.setAttribute("aria-selected","true");
-    ["harian","mingguan","bulanan","sholat","pengaturan"].forEach(function(r){
+    ["harian","mingguan","bulanan","sholat"].forEach(function(r){
       document.getElementById("rekap-"+r).classList.toggle("hidden", r !== b.getAttribute("data-rekap"));
     });
   });

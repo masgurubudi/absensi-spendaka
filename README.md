@@ -44,7 +44,7 @@ commit `072fdf60`) dengan data siswa asli dan penyimpanan permanen.
   (13 Nov 10.28), **Jumat 11.00** (13 Nov 10.29). **Sabtu dan Minggu libur**
   (tidak masuk — dikonfirmasi Mas Budi 13 Nov 19.01 WIB).
 - Mode Pulang hanya bisa di-scan mulai jam pulang hari itu.
-- Aturan dapat diubah di tab **Pengaturan** (di balik PIN guru yang sama) dan
+- Aturan dapat diubah di halaman **Kartu & QR** (khusus super admin, PIN 112233) dan
   tersimpan di Firestore `config/jadwal` + cache lokal, sehingga semua HP guru
   mengikuti aturan yang sama. Perubahan hanya berlaku untuk scan sesudah
   perubahan; status Terlambat/Tepat dicatat bersama tiap scan Datang.
@@ -96,7 +96,7 @@ commit `072fdf60`) dengan data siswa asli dan penyimpanan permanen.
   sinkronisasi Firestore antar-HP, dan tampilan nyata.
 - **Finalisasi 13 Nov 19.01 WIB:** PIN guru dikonfirmasi tetap `1234`; Sabtu
   diubah menjadi libur (`jamPulangFor` mengembalikan null untuk Sabtu, input
-  Pulang Sabtu dihapus dari tab Pengaturan, teks UI diperbarui, `gabungJadwal`
+  Pulang Sabtu dihapus dari Pengaturan Jadwal, teks UI diperbarui, `gabungJadwal`
   mengabaikan `jamPulang[6]`/`sabtuPlaceholder` dari dokumen lama);
   `prototype-orig.html` dihapus dari staging (dapat dipulihkan dari trash
   30 hari). Verifikasi ulang: `node --check` semua file JS lulus; smoke test
@@ -113,7 +113,7 @@ commit `072fdf60`) dengan data siswa asli dan penyimpanan permanen.
 4. **Uji HP sungguhan:** buka offline (mode pesawat setelah sekali muat),
    scan beberapa kartu, tutup halaman, nyalakan internet, periksa rekap di HP
    guru lain; uji dua HP memindai siswa yang sama bersamaan; uji ubah jadwal
-   di Pengaturan lalu periksa HP lain.
+   di halaman Kartu & QR (PIN super admin) lalu periksa HP lain.
 5. Keputusan penerbitan: repo **BARU** (diputuskan Mas Budi 13 Nov 19.01 WIB);
    nama yang diusulkan `absensi-siswa-qr` — menunggu Mas Budi membuatnya sendiri
    (publik), seperti pola repo sebelumnya.
@@ -133,3 +133,5 @@ Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
 - PIN guru **1234** → Scan Absensi dan Rekap Guru; PIN super admin **112233**
   → KHUSUS Kartu & QR; Orang Tua tanpa PIN. Masing-masing cukup sekali per sesi
   (sessionStorage); gerbang PIN Rekap Guru yang lama memakai sistem yang sama.
+
+- Pengaturan Jadwal PINDAH dari Rekap Guru ke halaman Kartu & QR (13 Nov 21.44 WIB): hanya super admin (PIN 112233) yang dapat mengubah jadwal; Rekap Guru (PIN 1234) tidak lagi berisi tab Pengaturan; penandaan Sakit/Izin wali kelas tetap di Rekap Guru.
