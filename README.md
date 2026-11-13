@@ -124,3 +124,12 @@ commit `072fdf60`) dengan data siswa asli dan penyimpanan permanen.
 penandaan Sakit/Izin wali kelas, halaman Orang Tua, Kartu & QR + unduh,
 Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
 (Chrome > Setelan > Setelan situs > Kamera).
+
+## Beranda + PIN (13 Nov 2026, setelah terbit pertama)
+- Tampilan awal = beranda biru gaya contoh "Presensi Siswa" Mas Budi: logo
+  sekolah (di-embed base64 di index.html, tetap tampil offline), 4 tombol besar
+  hijau: Scan Absensi, Rekap Guru, Orang Tua, Kartu & QR. Tiap halaman punya
+  tombol "← Beranda". Tidak ada spanduk sholat di beranda.
+- PIN guru **1234** → Scan Absensi dan Rekap Guru; PIN super admin **112233**
+  → KHUSUS Kartu & QR; Orang Tua tanpa PIN. Masing-masing cukup sekali per sesi
+  (sessionStorage); gerbang PIN Rekap Guru yang lama memakai sistem yang sama.
