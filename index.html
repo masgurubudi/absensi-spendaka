@@ -404,6 +404,7 @@
             <select id="kelasHarian"><option value="">Semua kelas</option><option>7A</option><option>7B</option><option>7C</option><option>7D</option><option>8A</option><option>8B</option><option>8C</option><option>8D</option><option>8E</option><option>9A</option><option>9B</option><option>9C</option><option>9D</option></select>
           </label>
           <button class="btn gold" id="dlHarian">⬇ Unduh CSV Harian</button>
+          <button class="btn" id="lihatHarian">👁 Lihat</button>
         </div>
         <div class="stats" id="harianStats"></div>
         <div class="tablewrap"><table class="stack-table">
@@ -1926,6 +1927,13 @@ document.getElementById("dlHarian").addEventListener("click", function(){
         r.rec && r.rec.halanganJam ? r.rec.halanganJam : "",
         r.rec && r.rec.pulang ? r.rec.pulang : "", r.ket];
     }));
+});
+/* Tombol Lihat (14 Nov 17.03 WIB): tampilkan ulang rekap harian untuk tanggal + kelas
+   yang terpilih, lalu gulir ke tabelnya supaya langsung terlihat di HP. */
+document.getElementById("lihatHarian").addEventListener("click", function(){
+  renderHarian();
+  var t = document.getElementById("rekap-harian");
+  if (t) t.scrollIntoView({behavior:"smooth", block:"start"});
 });
 document.getElementById("dlSholat").addEventListener("click", function(){
   var dateKey = tglSholat.value || keyOf(new Date());
