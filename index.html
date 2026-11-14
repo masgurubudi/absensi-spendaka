@@ -96,7 +96,7 @@
   .flash.ok{background:var(--ok-bg);color:var(--ok);border:1px solid var(--ok)}
   .flash.warn{background:var(--warn-bg);color:var(--warn);border:1px solid var(--warn)}
   .flash.bad{background:var(--bad-bg);color:var(--bad);border:1px solid var(--bad)}
-  .manual{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+  .manual{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
   .manual input{flex:1 1 180px;min-width:0;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);color:var(--ink)}
   .manual select{min-width:0;max-width:100%}
   .btn{border:none;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
@@ -174,6 +174,8 @@
   .mode-halangan[aria-selected="true"]{border-color:var(--brand-dark);background:var(--surface2);box-shadow:inset 0 0 0 1.5px var(--brand-dark)}
   .mode-banner{border-radius:var(--radius);padding:12px 16px;font-weight:700;margin-bottom:14px;border:1.5px solid var(--brand);background:var(--info-bg)}
   .halangan-box{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  /* Disembunyikan atas permintaan 14 Nov 13.19 WIB — isi tetap di berkas, hapus baris ini untuk menampilkan lagi: */
+  #cadanganPanel .halangan-box{display:none}
   .btn.small{min-height:38px;padding:6px 12px;font-size:.88rem}
   .today-grid3{display:grid;gap:12px;margin:16px 0}
   @media(min-width:860px){.today-grid3{grid-template-columns:1fr 1fr 1fr}}
@@ -324,11 +326,11 @@
     <div id="cadanganPanel" class="hidden">
       <div class="card">
         <h3 style="margin-top:0" id="scanCardTitle">Absen Manual - Ketuk Nama Siswa</h3>
-        <div class="pupils" id="pupilGrid"></div>
         <div class="manual">
           <input id="manualNis" inputmode="numeric" placeholder="atau ketik NIS, mis. 4572" aria-label="Ketik NIS siswa" />
           <button class="btn" id="manualBtn">Scan NIS Ini</button>
         </div>
+        <div class="pupils" id="pupilGrid"></div>
         <div class="halangan-box">
           <h3 style="margin:0 0 6px">Alur Berhalangan — Juga dengan Scan QR</h3>
           <p class="lead" style="margin:0">Berhalangan <b>tidak lagi ditandai manual</b>. Alurnya: siswa yang sudah sholat memindai kartunya saat keluar masjid/mushola (mode <b>Sholat Dhuhur</b>). Guru piket yang tidak memimpin sholat berkeliling lingkungan sekolah; bila menemukan siswa yang tidak sholat dan alasannya berhalangan — misalnya haid — guru piket <b>memindai kartu siswa itu</b> dengan mode <b>Scan Berhalangan</b>, sehingga siswa tersebut terekap <b>Berhalangan</b>, bukan Tidak Sholat. Coba di sini: pilih mode <b>4 · Scan Berhalangan</b> di atas, lalu ketuk nama siswa atau ketik NIS-nya.</p>
