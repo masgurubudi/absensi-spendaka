@@ -166,3 +166,8 @@ Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
 ## Judul & paragraf header dihapus (14 Nov 2026, 12.43 WIB)
 - Judul besar "Absensi Siswa dengan QR Kartu Siswa" dan paragraf "Satu QR yang sama untuk tiga absensi ..." di header aplikasi dihapus (beranda sudah jelas ini aplikasi Absensi). Yang tetap: baris "SMP NEGERI 2 KEBONAGUNG · KABUPATEN PACITAN", chip tanggal/jam, chip jadwal, dan semua isi/fungsi lain. Judul dokumen <title> "Aplikasi Absensi Siswa QR" tidak berubah.
 - Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 36/36 lulus; pemeriksaan statis header 10/10 lulus.
+
+## Paragraf kaki + lebar pilih nama diperbaiki (14 Nov 2026, 12.46 WIB)
+- Paragraf kaki "Absensi QR — SMP Negeri 2 Kebonagung. Data tersimpan permanen ..." dihapus (identitas SMP sudah di paling atas). Elemen <footer> tidak ada lagi.
+- Kotak pilih nama siswa di halaman Orang Tua meluber ke kanan karena opsi berisi "NAMA — KELAS (NIS XXXX)" yang panjang dan select flex default min-width:auto tidak mau mengecil. Diperbaiki: select diberi min-width:0 + max-width:100% (inline dan aturan CSS .manual select), isian NIS di baris yang sama juga diberi min-width:0. Isi opsi dan fungsi memilih nama tidak berubah.
+- Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 36/36 lulus; pemeriksaan statis 10/10 lulus.
