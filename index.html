@@ -102,6 +102,7 @@
   .toolbar select{min-width:0;max-width:100%}
   #absenSiswa{width:100%}
   #cariAbsenSiswa{min-width:0;width:100%}
+  #rekap-harian.tutup #harianStats, #rekap-harian.tutup .tablewrap{display:none}
   .btn{border:none;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
   @media (prefers-color-scheme: dark){ .btn{color:#0d1620} }
   .btn.gold{background:var(--gold);color:#231a05}
@@ -403,7 +404,7 @@
         <button role="tab" aria-selected="false" data-rekap="sholat">🕌 Sholat Dhuhur</button>
       </div>
 
-      <div id="rekap-harian">
+      <div id="rekap-harian" class="tutup">
         <div class="toolbar">
           <label>Tanggal <input type="date" id="tglHarian" /></label>
           <label>Kelas
@@ -1646,6 +1647,9 @@ rekapBtns.forEach(function(b){
     ["harian","mingguan","bulanan","sholat"].forEach(function(r){
       document.getElementById("rekap-"+r).classList.toggle("hidden", r !== b.getAttribute("data-rekap"));
     });
+    /* (14 Nov 17.18 WIB) Pindah tab apa pun -> rekap Harian tertutup lagi;
+       kembali ke tab Harian tetap tertutup sampai LIHAT diketuk. */
+    document.getElementById("rekap-harian").classList.add("tutup");
   });
 });
 
@@ -1957,11 +1961,12 @@ document.getElementById("dlHarian").addEventListener("click", function(){
         r.rec && r.rec.pulang ? r.rec.pulang : "", r.ket];
     }));
 });
-/* Tombol Lihat (14 Nov 17.03 WIB): tampilkan ulang rekap harian untuk tanggal + kelas
-   yang terpilih, lalu gulir ke tabelnya supaya langsung terlihat di HP. */
+/* Tombol Lihat (14 Nov 17.03 WIB, diubah 17.18 WIB): tampilkan rekap harian
+   yang sedang tertutup, lalu gulir ke ringkasan/tabelnya supaya langsung terlihat. */
 document.getElementById("lihatHarian").addEventListener("click", function(){
   renderHarian();
-  var t = document.getElementById("rekap-harian");
+  document.getElementById("rekap-harian").classList.remove("tutup");
+  var t = document.getElementById("harianStats");
   if (t) t.scrollIntoView({behavior:"smooth", block:"start"});
 });
 document.getElementById("dlSholat").addEventListener("click", function(){
