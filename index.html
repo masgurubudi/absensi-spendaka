@@ -323,7 +323,7 @@
     <button type="button" class="btn" id="caraCadanganBtn" aria-expanded="false" aria-controls="cadanganPanel" style="width:100%;margin:0 0 18px">📋 CARA CADANGAN</button>
     <div id="cadanganPanel" class="hidden">
       <div class="card">
-        <h3 style="margin-top:0" id="scanCardTitle">Simulasi Scan — Ketuk Nama Siswa</h3>
+        <h3 style="margin-top:0" id="scanCardTitle">Absen Manual - Ketuk Nama Siswa</h3>
         <div class="pupils" id="pupilGrid"></div>
         <div class="manual">
           <input id="manualNis" inputmode="numeric" placeholder="atau ketik NIS, mis. 4572" aria-label="Ketik NIS siswa" />
@@ -1345,7 +1345,7 @@ document.getElementById("cadanganTutupBtn").addEventListener("click", function()
 function renderScan(){
   var k = keyOf(new Date());
   document.getElementById("modeBanner").textContent = MODE_INFO[scanMode].banner;
-  document.getElementById("scanCardTitle").textContent = "Scan "+MODE_INFO[scanMode].label+" — Ketuk Nama Siswa";
+  document.getElementById("scanCardTitle").textContent = "Absen Manual - Ketuk Nama Siswa";
   document.getElementById("manualBtn").textContent = "Scan untuk "+MODE_INFO[scanMode].label;
   var grid = document.getElementById("pupilGrid");
   grid.innerHTML = "";
