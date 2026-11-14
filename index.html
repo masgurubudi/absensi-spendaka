@@ -104,6 +104,7 @@
   #cariAbsenSiswa{min-width:0;width:100%}
   #cariOrtu{min-width:0;width:100%}
   #cariKartu{flex:1 1 200px;min-width:0}
+  #absenCatatan{font-size:.85rem}
   #rekap-harian.tutup #harianStats, #rekap-harian.tutup .tablewrap{display:none}
   .btn{border:none;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
   @media (prefers-color-scheme: dark){ .btn{color:#0d1620} }
@@ -335,7 +336,7 @@
       <div class="card">
         <h3 style="margin-top:0" id="scanCardTitle">Absen Manual - Ketuk Nama Siswa</h3>
         <div class="manual">
-          <input id="manualNis" placeholder="atau ketik NIS / nama" aria-label="Ketik NIS atau nama siswa" />
+          <input id="manualNis" placeholder="Ketik NAMA atau NIS" aria-label="Ketik NIS atau nama siswa" />
           <button class="btn" id="manualBtn">Scan NIS Ini</button>
         </div>
         <div class="pupils" id="pupilGrid"></div>
@@ -373,7 +374,7 @@
         <div class="toolbar" style="margin-bottom:8px">
           <label>Tanggal <input type="date" id="tglAbsen" /></label>
           <label style="flex:1 1 240px;min-width:0">Siswa
-            <input id="cariAbsenSiswa" placeholder="Cari nama atau NIS… (ketik 1–3 huruf)" aria-label="Cari siswa" />
+            <input id="cariAbsenSiswa" placeholder="Ketik NAMA atau NIS" aria-label="Cari siswa" />
             <select id="absenSiswa" aria-label="Pilih siswa yang ditandai sakit atau izin">
               <option value="" selected>Pilih Siswa</option>
             </select>
@@ -393,7 +394,7 @@
           </label>
         </div>
         <div class="manual" style="margin-top:0">
-          <input id="absenCatatan" placeholder="Catatan bebas — wajib diisi bila keterangan Lainnya, mis. mengantar orang tua berobat" aria-label="Catatan bebas keterangan sakit atau izin" />
+          <input id="absenCatatan" placeholder="Catatan bebas — wajib bila Lainnya" aria-label="Catatan bebas keterangan sakit atau izin" />
           <button class="btn gold" id="absenBtn">Tandai Sakit / Izin</button>
         </div>
         <div id="absenList"></div>
@@ -504,7 +505,7 @@
         <button class="btn" id="ortuCariBtn">Cari</button>
       </div>
       <div class="manual" style="margin:0">
-        <input id="cariOrtu" placeholder="Cari nama atau NIS… (ketik 1–3 huruf)" aria-label="Cari nama siswa" />
+        <input id="cariOrtu" placeholder="Ketik NAMA atau NIS" aria-label="Cari nama siswa" />
       </div>
       <div class="manual">
         <select id="ortuSelect" aria-label="Pilih nama siswa" style="flex:1 1 220px;min-width:0;max-width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);color:var(--ink)">
@@ -2314,7 +2315,7 @@ function renderKartu(){
   /* Filter kelas untuk kartu (402 kartu tidak dirender sekaligus agar ringan di HP). */
   var toolbar = document.createElement("div");
   toolbar.className = "toolbar";
-  toolbar.innerHTML = '<label>Kelas <select id="kelasKartu"></select></label><input id="cariKartu" placeholder="Cari nama atau NIS… (ketik 1–3 huruf)" aria-label="Cari kartu siswa" /><span class="lead" style="margin:0">Pilih kelas, atau cari nama/NIS, untuk menampilkan kartunya.</span>';
+  toolbar.innerHTML = '<label>Kelas <select id="kelasKartu"></select></label><input id="cariKartu" placeholder="Ketik NAMA atau NIS" aria-label="Cari kartu siswa" /><span class="lead" style="margin:0">Pilih kelas, atau cari nama/NIS, untuk menampilkan kartunya.</span>';
   var grid = document.getElementById("cardGrid");
   grid.parentNode.insertBefore(toolbar, grid);
   kelasKartuSel = document.getElementById("kelasKartu");
