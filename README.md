@@ -171,3 +171,7 @@ Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
 - Paragraf kaki "Absensi QR — SMP Negeri 2 Kebonagung. Data tersimpan permanen ..." dihapus (identitas SMP sudah di paling atas). Elemen <footer> tidak ada lagi.
 - Kotak pilih nama siswa di halaman Orang Tua meluber ke kanan karena opsi berisi "NAMA — KELAS (NIS XXXX)" yang panjang dan select flex default min-width:auto tidak mau mengecil. Diperbaiki: select diberi min-width:0 + max-width:100% (inline dan aturan CSS .manual select), isian NIS di baris yang sama juga diberi min-width:0. Isi opsi dan fungsi memilih nama tidak berubah.
 - Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 36/36 lulus; pemeriksaan statis 10/10 lulus.
+
+## Chip Jadwal disembunyikan di Orang Tua & Rekap Guru (14 Nov 2026, 12.50 WIB, dikoreksi 12.51 WIB)
+- Chip Jadwal (#chipJadwal, ringkasan jadwal hari ini, hanya tampilan) disembunyikan di halaman Orang Tua DAN Rekap Guru; tetap tampil di halaman Scan (petugas gerbang membutuhkannya sekilas) dan Kartu & QR. Mekanisme: class `tanpa-chip` pada body, dipasang/dilepas di pengendali klik tab navigasi (semua jalur buka halaman melewatinya) dan dihapus saat kembali ke beranda. Isi chip tetap diperbarui normal oleh terapkanJadwal().
+- Verifikasi: node --check lulus; harness /tmp/harness-chip.js 46/46 lulus (36 navigasi lama + 10 chip).

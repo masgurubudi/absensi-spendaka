@@ -193,6 +193,7 @@
 
   /* ---------- beranda (tampilan awal, contoh Presensi Siswa) ---------- */
   body.beranda-aktif header.top, body.beranda-aktif footer{display:none}
+  body.tanpa-chip #chipJadwal{display:none}
   /* Baris 4 tombol menu (nav.tabs) tidak pernah tampil: navigasi hanya lewat 4 tombol
      besar di beranda dan tombol "← Beranda" di tiap menu. Nav tetap di DOM karena
      mesin pindah halaman JS memakai klik tombolnya (goView). */
@@ -1231,6 +1232,7 @@ function goBeranda(){
   document.querySelectorAll("section.view").forEach(function(v){ v.classList.remove("active"); });
   document.getElementById("view-beranda").classList.add("active");
   document.body.classList.add("beranda-aktif");
+  document.body.classList.remove("tanpa-chip");
   window.scrollTo(0, 0);
 }
 function bukaHalaman(nama){
@@ -1243,6 +1245,7 @@ tabBtns.forEach(function(b){
     var v = b.getAttribute("data-view");
     if (!bolehBuka(v)){ mintaPin(v === "kartu" ? "admin" : "guru", v); return; }
     document.body.classList.remove("beranda-aktif");
+    document.body.classList.toggle("tanpa-chip", v === "ortu" || v === "guru");
     tabBtns.forEach(function(x){ x.setAttribute("aria-selected","false"); });
     b.setAttribute("aria-selected","true");
     document.querySelectorAll("section.view").forEach(function(x){ x.classList.remove("active"); });
