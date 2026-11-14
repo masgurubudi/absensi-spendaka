@@ -1250,6 +1250,9 @@ function sinkronGerbangGuru(){
   }
 }
 function goBeranda(){
+  /* Reset pencari (14 Nov 18.22 WIB): tampilan yang ditinggalkan kembali bersih. */
+  var vAktif = document.querySelector("section.view.active");
+  if (vAktif && vAktif.id !== "view-beranda") resetPencariView(vAktif.id.replace("view-",""));
   if (typeof matikanKamera === "function" && typeof camStream !== "undefined" && camStream)
     matikanKamera("Kamera dimatikan karena kembali ke beranda. Nyalakan lagi di halaman Scan Absensi bila diperlukan.");
   document.getElementById("pinBeranda").classList.add("hidden");
@@ -1271,6 +1274,9 @@ tabBtns.forEach(function(b){
   b.addEventListener("click", function(){
     var v = b.getAttribute("data-view");
     if (!bolehBuka(v)){ mintaPin(v === "kartu" ? "admin" : "guru", v); return; }
+    /* Reset pencari (14 Nov 18.22 WIB): tampilan yang ditinggalkan kembali bersih. */
+    var aktif = document.querySelector("section.view.active");
+    if (aktif && aktif.id !== "view-"+v) resetPencariView(aktif.id.replace("view-",""));
     document.body.classList.remove("beranda-aktif");
     document.body.classList.toggle("tanpa-chip", v === "ortu" || v === "guru");
     tabBtns.forEach(function(x){ x.setAttribute("aria-selected","false"); });
@@ -1283,6 +1289,30 @@ tabBtns.forEach(function(b){
     window.scrollTo(0, 0);
   });
 });
+/* ---------- Reset pencari siswa saat tampilan ditinggalkan (14 Nov 18.22 WIB) ----------
+   Setiap kotak pencari nama siswa dikosongkan + daftarnya kembali lengkap tiap kali
+   panel/menu/tab yang memuatnya ditutup atau ditinggalkan, supaya saat dibuka lagi
+   selalu mulai dari kosong. Hanya pencari siswa yang direset — field lain (tanggal,
+   kelas, filter lain, input NIS Orang Tua, data anak yang sedang tampil) tidak diubah. */
+function resetPencariView(v){
+  if (v === "scan"){
+    aturCadangan(false); /* menutup panel + mengosongkan #manualNis + grid kembali penuh */
+  } else if (v === "ortu"){
+    var c = document.getElementById("cariOrtu");
+    if (c) c.value = "";
+    isiOrtuSelect("");
+  } else if (v === "guru"){
+    var a = document.getElementById("cariAbsenSiswa");
+    if (a) a.value = "";
+    isiAbsenSiswa("");
+    document.getElementById("absenSiswa").value = ""; /* kembali ke "Pilih Siswa" */
+  } else if (v === "kartu"){
+    cariKartuQ = "";
+    var k = document.getElementById("cariKartu");
+    if (k) k.value = "";
+    renderKartu();
+  }
+}
 function goView(name){
   tabBtns.forEach(function(b){ if (b.getAttribute("data-view")===name) b.click(); });
 }
@@ -1359,6 +1389,14 @@ function aturCadangan(buka){
   panel.classList.toggle("hidden", !buka);
   btn.setAttribute("aria-expanded", buka ? "true" : "false");
   btn.textContent = buka ? "\u2715 TUTUP CARA CADANGAN" : "\uD83D\uDCCB CARA CADANGAN";
+  /* Reset pencari (14 Nov 18.22 WIB): tiap tutup ATAU buka panel, kolom pencari
+     dikosongkan dan grid kartu nama kembali penuh — tidak ada ketikan yang tertinggal.
+     Ketikan tidak mungkin sedang berjalan saat panel dibuka, karena kotaknya ada di
+     dalam panel yang tadinya tersembunyi. */
+  var m = document.getElementById("manualNis");
+  if (m) m.value = "";
+  cariManual = "";
+  renderScan();
 }
 document.getElementById("caraCadanganBtn").addEventListener("click", function(){
   aturCadangan(document.getElementById("cadanganPanel").classList.contains("hidden"));
