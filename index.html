@@ -201,21 +201,25 @@
   /* Saat isian PIN tampil di beranda, keempat tombol besar disembunyikan. */
   #view-beranda.pin-aktif .tombol-beranda{display:none}
   body.beranda-aktif .wrap{padding-bottom:0}
-  #view-beranda{background:#00adef;min-height:100vh;min-height:100dvh;margin:0 -16px;padding:26px 20px 22px;
+  /* Beranda harus muat satu layar HP tanpa scroll: ukuran mengikuti tinggi
+     viewport (dvh) dengan batas atas = tampilan lama, supaya di layar tinggi
+     tetap terlihat sama, di layar pendek mengecil secukupnya. */
+  #view-beranda{background:#00adef;min-height:100vh;min-height:100dvh;margin:0 -16px;
+    padding:26px 20px 22px;padding:clamp(12px,2dvh,26px) 20px clamp(10px,1.6dvh,22px);
     display:none;flex-direction:column;align-items:center;text-align:center;color:#000}
   #view-beranda.active{display:flex}
-  #view-beranda .logo-sekolah{width:190px;max-width:62vw;height:auto;margin:24px 0 4px}
-  #view-beranda h1.beranda-judul{font-size:clamp(2rem,9vw,2.6rem);font-weight:800;color:#000;margin:8px 0 0;line-height:1.15}
-  #view-beranda .beranda-sub{font-size:1.15rem;color:#000;margin:6px 0 26px}
-  .tombol-beranda{display:flex;flex-direction:column;gap:16px;width:100%;max-width:380px}
+  #view-beranda .logo-sekolah{width:190px;width:clamp(120px,22dvh,190px);max-width:62vw;height:auto;margin:24px 0 4px;margin-top:clamp(4px,1.2dvh,24px)}
+  #view-beranda h1.beranda-judul{font-size:2rem;font-size:clamp(1.75rem,8vw,2.6rem);font-weight:800;color:#000;margin:8px 0 0;line-height:1.15}
+  #view-beranda .beranda-sub{font-size:1.05rem;color:#000;margin:6px 0 26px;margin-bottom:clamp(14px,2.5dvh,26px)}
+  .tombol-beranda{display:flex;flex-direction:column;gap:16px;gap:clamp(10px,1.6dvh,16px);width:100%;max-width:380px}
   .tombol-beranda button{background:#4caf50;color:#000;border:none;border-radius:12px;
-    padding:18px 20px;font-size:1.15rem;font-weight:800;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,.25)}
+    padding:18px 20px;padding:clamp(12px,2dvh,18px) 20px;font-size:1.15rem;font-size:clamp(1rem,2.2dvh,1.15rem);font-weight:800;cursor:pointer;box-shadow:0 3px 6px rgba(0,0,0,.25)}
   .tombol-beranda button:active{transform:translateY(1px)}
   .pin-beranda{background:#fff;border-radius:14px;padding:18px;width:100%;max-width:380px;
     margin-top:18px;text-align:center;color:#1c2b36;box-shadow:0 3px 10px rgba(0,0,0,.25)}
   .pin-beranda input{width:100%;text-align:center;font-size:1.3rem;letter-spacing:.4em;border:1.5px solid #c9d6df;border-radius:10px;padding:8px;background:#fff;color:#1c2b36}
   .pin-beranda .err{color:#b3362b}
-  #view-beranda .beranda-kaki{margin-top:auto;padding-top:28px;font-style:italic;font-size:.95rem;color:#000}
+  #view-beranda .beranda-kaki{margin-top:auto;padding-top:28px;padding-top:clamp(10px,2dvh,28px);font-style:italic;font-size:.95rem;color:#000}
 
   /* ---------- cetak kartu ---------- */
   @media print{
