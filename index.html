@@ -2216,6 +2216,9 @@ function renderOrtu(s){
       '<div class="cap">DATANG — HARI INI</div><div class="val">✓ Sudah datang</div>' +
       '<div class="jam">Pukul '+rec.masuk+' WIB</div>' +
       '<div>'+(st==="terlambat" ? "Status: <b>Terlambat</b> (batas tepat waktu "+JADWAL.batasTerlambat+")" : "Status: <b>Tepat Waktu</b>")+'</div></div>';
+  } else if (!jamPulangHariIni()){
+    boxDatang = '<div class="big-status"><div class="cap">DATANG — HARI INI</div>' +
+      '<div class="val">Libur</div><div>Hari ini libur (Sabtu/Minggu), tidak ada kegiatan sekolah.</div></div>';
   } else {
     boxDatang = '<div class="big-status none"><div class="cap">DATANG — HARI INI</div>' +
       '<div class="val">Belum ada catatan datang</div><div>QR anak belum dipindai di gerbang pada hari ini.</div></div>';
