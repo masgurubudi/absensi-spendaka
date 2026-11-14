@@ -500,10 +500,6 @@
     </div>
     <div class="card">
       <h3 style="margin-top:0">Cari Data Anak</h3>
-      <div class="manual" style="margin-top:0">
-        <input id="ortuNis" inputmode="numeric" placeholder="Masukkan NIS anak, mis. 4572" aria-label="NIS anak" />
-        <button class="btn" id="ortuCariBtn">Cari</button>
-      </div>
       <div class="manual" style="margin:0">
         <input id="cariOrtu" placeholder="Ketik NAMA atau NIS" aria-label="Cari nama siswa" />
       </div>
@@ -2118,19 +2114,13 @@ isiOrtuSelect("");
 document.getElementById("cariOrtu").addEventListener("input", function(){
   isiOrtuSelect(this.value.trim());
 });
-document.getElementById("ortuCariBtn").addEventListener("click", function(){
-  cariAnak(document.getElementById("ortuNis").value.replace(/\D/g,""));
-});
-document.getElementById("ortuNis").addEventListener("keydown", function(e){
-  if (e.key === "Enter") cariAnak(e.target.value.replace(/\D/g,""));
-});
 document.getElementById("ortuPilihBtn").addEventListener("click", function(){ cariAnak(ortuSelect.value); });
 function cariAnak(nis){
   var err = document.getElementById("ortuErr");
   var s = studentByNis(nis);
   if (!s){
     err.textContent = nis ? "NIS "+nis+" tidak ditemukan pada daftar siswa. Periksa NIS-nya, atau pilih nama pada daftar."
-                          : "Masukkan NIS anak terlebih dahulu, atau pilih nama pada daftar.";
+                          : "Ketik nama atau NIS anak pada kotak pencarian, atau pilih nama pada daftar.";
     document.getElementById("ortuHasil").classList.add("hidden");
     ortuNisAktif = null; return;
   }
