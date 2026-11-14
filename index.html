@@ -187,6 +187,7 @@
   .cam-frame::before{content:"";width:min(62%,260px);aspect-ratio:1;border:3px solid rgba(255,255,255,.9);border-radius:14px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
   .cam-idle{padding:28px 16px;text-align:center;color:#cfe0ee}
   .cam-status{margin:12px 0 0;font-weight:600}
+  #camStatus{font-size:.85rem}
   .cam-status.err{color:var(--bad)}
   .cam-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:center;margin-top:12px}
   .idcard .dl-one{margin-top:10px;width:100%}
@@ -2324,7 +2325,7 @@ function matikanKamera(pesan){
   if (pesan) camStatus(pesan);
 }
 document.getElementById("camStopBtn").addEventListener("click", function(){
-  matikanKamera("Kamera dimatikan. Cara cadangan: ketuk tombol CARA CADANGAN di bawah untuk mencatat lewat daftar nama / NIS.");
+  matikanKamera("Kamera tidak berfungsi, gunakan CARA CADANGAN");
 });
 document.getElementById("camStartBtn").addEventListener("click", function(){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
