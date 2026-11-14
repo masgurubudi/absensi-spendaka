@@ -162,3 +162,7 @@ Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
   tombol "← Beranda", kotak emas (judul + paragraf), lalu "Cari Data Anak".
   Isian NIS + Cari, pilih nama, Lihat Data, dan semua fungsi tidak berubah.
 - Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 36/36 lulus.
+
+## Judul & paragraf header dihapus (14 Nov 2026, 12.43 WIB)
+- Judul besar "Absensi Siswa dengan QR Kartu Siswa" dan paragraf "Satu QR yang sama untuk tiga absensi ..." di header aplikasi dihapus (beranda sudah jelas ini aplikasi Absensi). Yang tetap: baris "SMP NEGERI 2 KEBONAGUNG · KABUPATEN PACITAN", chip tanggal/jam, chip jadwal, dan semua isi/fungsi lain. Judul dokumen <title> "Aplikasi Absensi Siswa QR" tidak berubah.
+- Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 36/36 lulus; pemeriksaan statis header 10/10 lulus.
