@@ -102,6 +102,8 @@
   .toolbar select{min-width:0;max-width:100%}
   #absenSiswa{width:100%}
   #cariAbsenSiswa{min-width:0;width:100%}
+  #cariOrtu{min-width:0;width:100%}
+  #cariKartu{flex:1 1 200px;min-width:0}
   #rekap-harian.tutup #harianStats, #rekap-harian.tutup .tablewrap{display:none}
   .btn{border:none;border-radius:10px;padding:10px 18px;font-weight:700;cursor:pointer;background:var(--brand);color:#fff}
   @media (prefers-color-scheme: dark){ .btn{color:#0d1620} }
@@ -333,7 +335,7 @@
       <div class="card">
         <h3 style="margin-top:0" id="scanCardTitle">Absen Manual - Ketuk Nama Siswa</h3>
         <div class="manual">
-          <input id="manualNis" inputmode="numeric" placeholder="atau ketik NIS, mis. 4572" aria-label="Ketik NIS siswa" />
+          <input id="manualNis" placeholder="atau ketik NIS / nama" aria-label="Ketik NIS atau nama siswa" />
           <button class="btn" id="manualBtn">Scan NIS Ini</button>
         </div>
         <div class="pupils" id="pupilGrid"></div>
@@ -500,6 +502,9 @@
       <div class="manual" style="margin-top:0">
         <input id="ortuNis" inputmode="numeric" placeholder="Masukkan NIS anak, mis. 4572" aria-label="NIS anak" />
         <button class="btn" id="ortuCariBtn">Cari</button>
+      </div>
+      <div class="manual" style="margin:0">
+        <input id="cariOrtu" placeholder="Cari nama atau NIS… (ketik 1–3 huruf)" aria-label="Cari nama siswa" />
       </div>
       <div class="manual">
         <select id="ortuSelect" aria-label="Pilih nama siswa" style="flex:1 1 220px;min-width:0;max-width:100%;border:1.5px solid var(--line);border-radius:10px;padding:8px 12px;background:var(--surface);color:var(--ink)">
@@ -1359,6 +1364,13 @@ document.getElementById("caraCadanganBtn").addEventListener("click", function(){
   aturCadangan(document.getElementById("cadanganPanel").classList.contains("hidden"));
 });
 document.getElementById("cadanganTutupBtn").addEventListener("click", function(){ aturCadangan(false); });
+/* Pencari siswa (14 Nov 17.31 WIB): SATU pola untuk semua tempat pencarian siswa —
+   nama cocok sebagian (tanpa memperhatikan huruf besar/kecil) atau NIS cocok sebagian angka. */
+function cocokSiswa(s, q){
+  q = (q || "").toLowerCase();
+  return !q || s.nama.toLowerCase().indexOf(q) !== -1 || String(s.nis).indexOf(q) !== -1;
+}
+var cariManual = ""; /* kata kunci pencari di panel manual Scan */
 function renderScan(){
   var k = keyOf(new Date());
   document.getElementById("modeBanner").textContent = MODE_INFO[scanMode].banner;
@@ -1367,6 +1379,8 @@ function renderScan(){
   var grid = document.getElementById("pupilGrid");
   grid.innerHTML = "";
   var nDatang=0, nSholat=0, nHalangan=0, nPulang=0;
+  var q = (typeof cariManual !== "undefined" ? cariManual : "").toLowerCase();
+  var daftar = STUDENTS.filter(function(s){ return cocokSiswa(s, q); });
   STUDENTS.forEach(function(s){
     var rec = getRecord(k, s.nis);
     if (rec && rec.masuk) nDatang++;
@@ -1374,6 +1388,12 @@ function renderScan(){
     if (ss === "sudah") nSholat++;
     if (ss === "berhalangan") nHalangan++;
     if (rec && rec.pulang) nPulang++;
+  });
+  if (q && !daftar.length){
+    grid.innerHTML = '<p class="lead">Tidak ada siswa yang cocok.</p>';
+  }
+  daftar.forEach(function(s){
+    var rec = getRecord(k, s.nis);
     var btn = document.createElement("button");
     btn.className = "pupil"; btn.type = "button";
     btn.innerHTML = '<span class="nm"></span><span class="meta"></span><span class="st">'+badgeFor(rec, k, s.nis)+'</span>';
@@ -1505,9 +1525,7 @@ function isiAbsenSiswa(q){
   var ph = document.createElement("option");
   ph.value = ""; ph.textContent = "Pilih Siswa";
   absenSiswaSel.appendChild(ph);
-  var cocok = STUDENTS.filter(function(s){
-    return !q || s.nama.toLowerCase().indexOf(q) !== -1 || String(s.nis).indexOf(q) !== -1;
-  });
+  var cocok = STUDENTS.filter(function(s){ return cocokSiswa(s, q); });
   if (q && !cocok.length){
     var op0 = document.createElement("option");
     op0.value = ""; op0.textContent = "Tidak ada siswa yang cocok"; op0.disabled = true;
@@ -1619,11 +1637,27 @@ function renderAbsenList(){
 }
 document.getElementById("absenBtn").addEventListener("click", tandaiAbsen);
 tglAbsen.addEventListener("change", renderAbsenList);
-document.getElementById("manualBtn").addEventListener("click", function(){
-  doScan(document.getElementById("manualNis").value);
+/* Pencari siswa panel manual (14 Nov 17.31 WIB): ketik NIS/nama menyaring kartu nama;
+   tombol Scan: NIS lengkap yang ditemukan → doScan seperti semula; bila yang diketik
+   huruf/nama dan tepat satu siswa cocok → scan siswa itu; bila lebih dari satu →
+   petunjuk ketuk salah satu kartu (jangan menandai siswa yang salah). */
+document.getElementById("manualNis").addEventListener("input", function(){
+  cariManual = this.value.trim();
+  renderScan();
 });
+function scanManual(){
+  var v = document.getElementById("manualNis").value.trim();
+  if (!v){ flash("bad", "Ketik NIS atau nama siswa dulu."); return; }
+  if (/^\d+$/.test(v) && studentByNis(v)){ doScan(v); return; }
+  var q = v.toLowerCase();
+  var cocok = STUDENTS.filter(function(s){ return cocokSiswa(s, q); });
+  if (cocok.length === 1){ doScan(cocok[0].nis); return; }
+  if (cocok.length > 1){ flash("warn", "Ada "+cocok.length+" siswa yang cocok — ketuk salah satu kartu di bawah."); return; }
+  flash("bad", "Tidak ada siswa yang cocok dengan \""+v+"\".");
+}
+document.getElementById("manualBtn").addEventListener("click", scanManual);
 document.getElementById("manualNis").addEventListener("keydown", function(e){
-  if (e.key === "Enter") doScan(e.target.value);
+  if (e.key === "Enter") scanManual();
 });
 
 /* ================= GURU: PIN ================= */
@@ -2019,10 +2053,31 @@ document.getElementById("dlBulanan").addEventListener("click", function(){
 /* ================= ORANG TUA ================= */
 var ortuNisAktif = null;
 var ortuSelect = document.getElementById("ortuSelect");
-STUDENTS.forEach(function(s){
-  var op = document.createElement("option");
-  op.value = s.nis; op.textContent = s.nama+" — "+s.kelas+" (NIS "+s.nis+")";
-  ortuSelect.appendChild(op);
+/* Pencari siswa Orang Tua (14 Nov 17.31 WIB): pola sama seperti isiAbsenSiswa. */
+function isiOrtuSelect(q){
+  q = (q || "").toLowerCase();
+  var dipilih = ortuSelect.value;
+  ortuSelect.innerHTML = "";
+  var ph = document.createElement("option");
+  ph.value = ""; ph.textContent = "— atau pilih nama siswa —";
+  ortuSelect.appendChild(ph);
+  var cocok = STUDENTS.filter(function(s){ return cocokSiswa(s, q); });
+  if (q && !cocok.length){
+    var op0 = document.createElement("option");
+    op0.value = ""; op0.textContent = "Tidak ada siswa yang cocok"; op0.disabled = true;
+    ortuSelect.appendChild(op0);
+  }
+  cocok.forEach(function(s){
+    var op = document.createElement("option");
+    op.value = s.nis; op.textContent = s.nama+" — "+s.kelas+" (NIS "+s.nis+")";
+    ortuSelect.appendChild(op);
+  });
+  var tetap = dipilih && cocok.some(function(s){ return String(s.nis) === dipilih; });
+  ortuSelect.value = tetap ? dipilih : "";
+}
+isiOrtuSelect("");
+document.getElementById("cariOrtu").addEventListener("input", function(){
+  isiOrtuSelect(this.value.trim());
 });
 document.getElementById("ortuCariBtn").addEventListener("click", function(){
   cariAnak(document.getElementById("ortuNis").value.replace(/\D/g,""));
@@ -2177,12 +2232,28 @@ function renderOrtu(s){
 
 /* ================= KARTU QR ================= */
 var kelasKartuSel = null;
+var cariKartuQ = ""; /* kata kunci pencari kartu siswa (14 Nov 17.31 WIB) */
 function renderKartu(){
   var grid = document.getElementById("cardGrid");
   grid.innerHTML = "";
   var kelas = kelasKartuSel ? kelasKartuSel.value : "";
-  STUDENTS.forEach(function(s){
-    if (kelas && s.kelas !== kelas) return;
+  var q = (cariKartuQ || "").toLowerCase();
+  /* Bila kotak pencari diisi, pencarian mencakup semua kelas (bukan hanya kelas
+     yang terpilih) — kartu yang tampil hanya yang cocok. Kosong → filter kelas semula. */
+  var daftar = STUDENTS.filter(function(s){
+    if (q) return cocokSiswa(s, q);
+    return !kelas || s.kelas === kelas;
+  });
+  var BATAS_KARTU = 40; /* kartu dirender + QR-nya dibuat satu per satu; batasi agar ringan di HP */
+  var tampil = daftar.slice(0, BATAS_KARTU);
+  var info = document.getElementById("cariKartuInfo");
+  if (info){
+    info.textContent = !q ? "" :
+      !daftar.length ? "Tidak ada siswa yang cocok." :
+      daftar.length > BATAS_KARTU ? "Menampilkan "+BATAS_KARTU+" dari "+daftar.length+" kartu yang cocok — ketik lebih spesifik untuk mempersempit." :
+      daftar.length+" kartu cocok.";
+  }
+  tampil.forEach(function(s){
     var div = document.createElement("div");
     div.className = "idcard";
     div.setAttribute("data-nis", s.nis);
@@ -2205,7 +2276,7 @@ function renderKartu(){
   /* Filter kelas untuk kartu (402 kartu tidak dirender sekaligus agar ringan di HP). */
   var toolbar = document.createElement("div");
   toolbar.className = "toolbar";
-  toolbar.innerHTML = '<label>Kelas <select id="kelasKartu"></select></label><span class="lead" style="margin:0">Pilih kelas untuk menampilkan kartunya.</span>';
+  toolbar.innerHTML = '<label>Kelas <select id="kelasKartu"></select></label><input id="cariKartu" placeholder="Cari nama atau NIS… (ketik 1–3 huruf)" aria-label="Cari kartu siswa" /><span class="lead" style="margin:0">Pilih kelas, atau cari nama/NIS, untuk menampilkan kartunya.</span>';
   var grid = document.getElementById("cardGrid");
   grid.parentNode.insertBefore(toolbar, grid);
   kelasKartuSel = document.getElementById("kelasKartu");
@@ -2213,6 +2284,13 @@ function renderKartu(){
   KELAS_LIST.forEach(function(k){ var op = document.createElement("option"); op.value = k; op.textContent = k; kelasKartuSel.appendChild(op); });
   kelasKartuSel.value = "7A";
   kelasKartuSel.addEventListener("change", renderKartu);
+  var cariInfo = document.createElement("p");
+  cariInfo.className = "cam-status"; cariInfo.id = "cariKartuInfo"; cariInfo.setAttribute("role","status");
+  grid.parentNode.insertBefore(cariInfo, grid);
+  document.getElementById("cariKartu").addEventListener("input", function(){
+    cariKartuQ = this.value.trim();
+    renderKartu();
+  });
   renderKartu();
 })();
 
