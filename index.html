@@ -176,6 +176,8 @@
   .halangan-box{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
   /* Disembunyikan atas permintaan 14 Nov 13.19 WIB — isi tetap di berkas, hapus baris ini untuk menampilkan lagi: */
   #cadanganPanel .halangan-box{display:none}
+  /* Disembunyikan atas permintaan 14 Nov 17.02 WIB — isi tetap di berkas, hapus baris ini untuk menampilkan lagi: */
+  #rekapIntro{display:none}
   .btn.small{min-height:38px;padding:6px 12px;font-size:.88rem}
   .today-grid3{display:grid;gap:12px;margin:16px 0}
   @media(min-width:860px){.today-grid3{grid-template-columns:1fr 1fr 1fr}}
@@ -356,7 +358,7 @@
     </div>
     <div id="guruPanel" class="hidden">
       <h2>Rekap Absensi</h2>
-      <p class="lead">Data 402 siswa kelas 7A&ndash;7D, 8A&ndash;8E, dan 9A&ndash;9D (TP 2026/2027). Rekap Datang &amp; Pulang ada di tab Harian, Mingguan, dan Bulanan; rekap Sholat Dhuhur ada di tab tersendiri; aturan jam (masuk, batas terlambat, pulang per hari) hanya dapat diubah oleh super admin di halaman Kartu &amp; QR. Tombol unduh menghasilkan file CSV yang bisa dibuka dan diolah di Excel atau Google Sheets, sama seperti rekap spreadsheet.</p>
+      <p class="lead" id="rekapIntro">Data 402 siswa kelas 7A&ndash;7D, 8A&ndash;8E, dan 9A&ndash;9D (TP 2026/2027). Rekap Datang &amp; Pulang ada di tab Harian, Mingguan, dan Bulanan; rekap Sholat Dhuhur ada di tab tersendiri; aturan jam (masuk, batas terlambat, pulang per hari) hanya dapat diubah oleh super admin di halaman Kartu &amp; QR. Tombol unduh menghasilkan file CSV yang bisa dibuka dan diolah di Excel atau Google Sheets, sama seperti rekap spreadsheet.</p>
 
       <div class="card" style="margin-bottom:18px">
         <h3 style="margin-top:0">Tandai Sakit / Izin — oleh Wali Kelas</h3>
@@ -731,6 +733,11 @@ function perbaruiBadgeSinkron(){
     var el = document.getElementById(id);
     if (el) el.textContent = teks;
   });
+  /* Di halaman Rekap, baris status sinkron hanya tampil bila ada catatan belum terkirim;
+     saat semuanya sudah tersinkron ia disembunyikan (14 Nov 17.02 WIB). #syncStatus di Scan
+     sudah disembunyikan terpisah dan tidak disentuh di sini. */
+  var g = document.getElementById("syncStatusGuru");
+  if (g) g.classList.toggle("hidden", teks === "Semua catatan sudah terkirim dan tersinkron.");
 }
 function antreFirestore(docId, fields, hapus){
   OUTBOX[docId] = {docId: docId, fields: fields, hapus: hapus || []};
