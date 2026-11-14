@@ -191,7 +191,13 @@
   .idcard .dl-one{margin-top:10px;width:100%}
 
   /* ---------- beranda (tampilan awal, contoh Presensi Siswa) ---------- */
-  body.beranda-aktif header.top, body.beranda-aktif nav.tabs, body.beranda-aktif footer{display:none}
+  body.beranda-aktif header.top, body.beranda-aktif footer{display:none}
+  /* Baris 4 tombol menu (nav.tabs) tidak pernah tampil: navigasi hanya lewat 4 tombol
+     besar di beranda dan tombol "← Beranda" di tiap menu. Nav tetap di DOM karena
+     mesin pindah halaman JS memakai klik tombolnya (goView). */
+  nav.tabs{display:none}
+  /* Saat isian PIN tampil di beranda, keempat tombol besar disembunyikan. */
+  #view-beranda.pin-aktif .tombol-beranda{display:none}
   body.beranda-aktif .wrap{padding-bottom:0}
   #view-beranda{background:#00adef;min-height:100vh;min-height:100dvh;margin:0 -16px;padding:26px 20px 22px;
     display:none;flex-direction:column;align-items:center;text-align:center;color:#000}
@@ -470,7 +476,6 @@
     <button type="button" class="btn ghost small no-print" style="margin:14px 0 4px" data-ke-beranda>&larr; Beranda</button>
     <h2>Pantau Kehadiran Anak</h2>
     <p class="lead">Bapak/Ibu dapat melihat catatan putra-putrinya di sini: kapan tiba di sekolah, apakah sudah sholat dhuhur di sekolah atau berhalangan, kapan pulang, dan riwayatnya minggu ini serta bulan ini.</p>
-    <div class="note">Data yang tampil di sini adalah hasil scan QR anak Bapak/Ibu di gerbang sekolah. Halaman ini hanya untuk melihat; catatan absensi tidak dapat diubah dari sini.</div>
     <div class="card">
       <h3 style="margin-top:0">Cari Data Anak</h3>
       <div class="manual" style="margin-top:0">
@@ -1191,6 +1196,7 @@ function mintaPin(jenis, tujuan){
   document.getElementById("pinBerandaErr").textContent = "";
   var inp = document.getElementById("pinBerandaInput");
   inp.value = "";
+  document.getElementById("view-beranda").classList.add("pin-aktif");
   document.getElementById("pinBeranda").classList.remove("hidden");
   inp.focus();
 }
@@ -1201,6 +1207,7 @@ function cekPinBeranda(){
     if (pinJenis === "admin") SESI.admin = true; else SESI.guru = true;
     simpanSesi();
     document.getElementById("pinBeranda").classList.add("hidden");
+    document.getElementById("view-beranda").classList.remove("pin-aktif");
     var tujuan = pinTujuan || "scan";
     pinTujuan = null; pinJenis = null;
     goView(tujuan);
@@ -1221,6 +1228,7 @@ function goBeranda(){
     matikanKamera("Kamera dimatikan karena kembali ke beranda. Nyalakan lagi di halaman Scan Absensi bila diperlukan.");
   document.getElementById("pinBeranda").classList.add("hidden");
   document.getElementById("pinBerandaErr").textContent = "";
+  document.getElementById("view-beranda").classList.remove("pin-aktif");
   tabBtns.forEach(function(x){ x.setAttribute("aria-selected","false"); });
   document.querySelectorAll("section.view").forEach(function(v){ v.classList.remove("active"); });
   document.getElementById("view-beranda").classList.add("active");
@@ -1260,6 +1268,7 @@ document.getElementById("pinBerandaBtn").addEventListener("click", cekPinBeranda
 document.getElementById("pinBerandaInput").addEventListener("keydown", function(e){ if (e.key==="Enter") cekPinBeranda(); });
 document.getElementById("pinBerandaBatal").addEventListener("click", function(){
   document.getElementById("pinBeranda").classList.add("hidden");
+  document.getElementById("view-beranda").classList.remove("pin-aktif");
   document.getElementById("pinBerandaErr").textContent = "";
   pinTujuan = null; pinJenis = null;
 });

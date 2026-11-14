@@ -146,3 +146,17 @@ Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
   "✕ Tutup Cara Cadangan" untuk menyembunyikan lagi. Status sinkron dan
   "Aktivitas Scan Terakhir" disembunyikan dari halaman Scan (status sinkron
   tetap terlihat di halaman Rekap Guru).
+
+## Navigasi disederhanakan + note Orang Tua dihapus (14 Nov 2026, 12.29 & 12.31 WIB)
+- Baris 4 tombol menu (nav.tabs) tidak pernah tampil lagi: di beranda navigasi
+  lewat 4 tombol besar hijau; di tiap menu (Scan, Rekap Guru, Orang Tua,
+  Kartu & QR) hanya ada tombol "← Beranda" di atas. Nav tetap ada di DOM
+  karena mesin pindah halaman JS memakai klik tombolnya (goView).
+- Saat isian PIN tampil di beranda, keempat tombol besar disembunyikan
+  (class pin-aktif); tombol Batal mengembalikannya. PIN tetap: guru 1234
+  (Scan & Rekap), super admin 112233 (Kartu & QR), Orang Tua tanpa PIN.
+- Halaman Orang Tua: kotak keterangan emas ("Data yang tampil di sini adalah
+  hasil scan QR ... tidak dapat diubah dari sini.") DIHAPUS. Paragraf
+  pengantar, isian NIS + Cari, pilih nama, Lihat Data, dan semua fungsi
+  halaman Orang Tua tidak berubah.
+- Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 33/33 lulus.
