@@ -155,8 +155,10 @@ Rekap Harian/Mingguan/Bulanan + CSV, teks galat kamera yang benar
 - Saat isian PIN tampil di beranda, keempat tombol besar disembunyikan
   (class pin-aktif); tombol Batal mengembalikannya. PIN tetap: guru 1234
   (Scan & Rekap), super admin 112233 (Kartu & QR), Orang Tua tanpa PIN.
-- Halaman Orang Tua: kotak keterangan emas ("Data yang tampil di sini adalah
-  hasil scan QR ... tidak dapat diubah dari sini.") DIHAPUS. Paragraf
-  pengantar, isian NIS + Cari, pilih nama, Lihat Data, dan semua fungsi
-  halaman Orang Tua tidak berubah.
-- Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 33/33 lulus.
+- Halaman Orang Tua (koreksi 14 Nov 12.34 WIB, menggantikan hapus kotak): kotak
+  keterangan emas TIDAK dihapus — ISINYA DIGANTI menjadi judul "Pantau
+  Kehadiran Anak" + paragraf pengantar di dalam kotak; teks lama di dalam
+  kotak ("Data yang tampil di sini adalah hasil scan QR ...") dihapus. Susunan:
+  tombol "← Beranda", kotak emas (judul + paragraf), lalu "Cari Data Anak".
+  Isian NIS + Cari, pilih nama, Lihat Data, dan semua fungsi tidak berubah.
+- Verifikasi: node --check lulus; harness navigasi /tmp/harness-nav.js 36/36 lulus.
