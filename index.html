@@ -520,9 +520,9 @@
     <h2>Kartu Siswa &amp; Kode QR — Unduh &amp; Cetak di Sini</h2>
     <p class="lead">Di sinilah kartu per siswa berada: <b>402 kartu siswa</b>, satu kartu untuk tiap siswa. QR pada kartu berisi kode yang sama dengan Kartu Siswa yang sudah dicetak (format NIS-NAMA), sehingga kartu yang dicetak dari sini dapat dipindai seperti kartu aslinya. QR yang sama dipakai untuk keempat absensi: datang di gerbang, sholat dhuhur di masjid, scan berhalangan oleh guru piket, dan pulang di gerbang — yang membedakan catatannya adalah mode yang dipilih petugas saat memindai, bukan QR-nya.</p>
     <p class="lead">Pengaturan jadwal aplikasi (jam masuk, batas terlambat, jam pulang per hari) ada di bagian bawah halaman ini — hanya super admin yang dapat mengubahnya.</p>
-    <div class="note no-print"><b>Cara mencoba scan dari HP lain:</b> (1) ketuk <b>⬇ Unduh Kartu Ini (PNG)</b> pada satu kartu di bawah — gambar kartu tersimpan di HP dan bisa dibuka di perangkat lain atau dikirim ke HP kedua; atau pilih kelas di atas lalu ketuk <b>⬇ Unduh Kartu Kelas Ini (1 PNG)</b> untuk satu lembar berisi kartu-kartu kelas itu sekaligus; atau cetak lewat menu <b>Cetak</b> pada peramban/HP — halaman ini sudah diatur agar yang tercetak hanya kartu-kartunya, 2 kartu per baris. (2) Buka halaman <b>Scan Absensi</b>, pilih mode, ketuk <b>Nyalakan Kamera</b>, lalu arahkan kamera ke QR pada kartu yang tercetak / tampil di perangkat lain.</div>
+    <div class="note no-print"><b>Cara mencoba scan dari HP lain:</b> (1) ketuk <b>⬇ Unduh Kartu Ini (PDF)</b> pada satu kartu di bawah — berkas PDF A4 berisi satu kartu tersimpan di HP dan bisa dibuka di perangkat lain atau dikirim ke HP kedua; atau ketuk <b>⬇ Unduh Semua (PDF)</b> untuk satu berkas PDF berisi kartu-kartu sesuai filter kelas di atas (8 kartu per halaman A4 — tinggal cetak lalu gunting); tanpa memilih kelas, yang diunduh semua 402 kartu. atau cetak lewat menu <b>Cetak</b> pada peramban/HP — halaman ini sudah diatur agar yang tercetak hanya kartu-kartunya, 2 kartu per baris. (2) Buka halaman <b>Scan Absensi</b>, pilih mode, ketuk <b>Nyalakan Kamera</b>, lalu arahkan kamera ke QR pada kartu yang tercetak / tampil di perangkat lain.</div>
     <div class="toolbar no-print">
-      <button type="button" class="btn gold" id="dlAllCardsBtn">⬇ Unduh Kartu Kelas Ini (1 PNG)</button>
+      <button type="button" class="btn gold" id="dlAllCardsBtn">⬇ Unduh Semua (PDF)</button>
     </div>
     <p class="cam-status" id="cardDlStatus" role="status"></p>
     <div class="cards" id="cardGrid"></div>
@@ -2292,7 +2292,7 @@ function renderKartu(){
     div.innerHTML = '<div class="sch">KARTU SISWA · SMP NEGERI 2 KEBONAGUNG</div>' +
       '<div class="nm"></div><div class="meta"></div><div class="qr"></div>' +
       '<div class="nis">NIS '+s.nis+'</div>' +
-      '<button type="button" class="btn dl-one no-print">⬇ Unduh Kartu Ini (PNG)</button>';
+      '<button type="button" class="btn dl-one no-print">⬇ Unduh Kartu Ini (PDF)</button>';
     div.querySelector(".nm").textContent = s.nama;
     div.querySelector(".meta").textContent = "Kelas "+s.kelas;
     div.querySelector(".dl-one").addEventListener("click", function(){ unduhKartuSatu(s); });
@@ -2326,89 +2326,208 @@ function renderKartu(){
   renderKartu();
 })();
 
-/* ================= UNDUH / CETAK KARTU ================= */
-function qrImageFor(nis){
-  return new Promise(function(resolve){
-    var card = document.querySelector('.idcard[data-nis="'+nis+'"]');
-    var img = card ? card.querySelector(".qr img") : null;
-    var canvas = card ? card.querySelector(".qr canvas") : null;
-    var src = null;
-    if (img && img.src) src = img.src;
-    else if (canvas){ try { src = canvas.toDataURL("image/png"); } catch(e){} }
-    if (!src){ resolve(null); return; }
-    var im = new Image();
-    im.onload = function(){ resolve(im); };
-    im.onerror = function(){ resolve(null); };
-    im.src = src;
-  });
+/* ================= UNDUH KARTU (PDF A4) ================= */
+/* Kartu diunduh sebagai PDF ukuran A4 (595 x 842 pt) supaya langsung bisa
+   dicetak dari HP/laptop tanpa mengatur ukuran gambar dulu. PDF dibuat di
+   perangkat ini saja (tanpa pustaka tambahan, tanpa internet): tiap kode QR
+   digambar sebagai kotak-kotak vektor dari pustaka QR yang sama dengan yang
+   dipakai kartu di layar, dan teks memakai fon standar Helvetica.
+   - "Unduh Kartu Ini (PDF)": 1 halaman A4 berisi satu kartu di tengah.
+   - "Unduh Semua (PDF)": satu berkas berisi kartu-kartu sesuai filter kelas
+     di atas (tanpa memilih kelas = semua kartu), 8 kartu per halaman A4
+     (2 kolom x 4 baris), dengan tanda potong di tiap sudut kartu. */
+var PDF_A4_W = 595, PDF_A4_H = 842; /* ukuran kertas A4 dalam point */
+var PDF_KARTU_MARGIN = 36, PDF_KARTU_GAPX = 16, PDF_KARTU_GAPY = 16;
+var PDF_KARTU_KOLOM = 2, PDF_KARTU_BARIS = 4; /* 8 kartu per halaman A4 */
+/* Lebar tiap huruf fon Helvetica (standar AFM, per 1000 em), kode 32-126. */
+var LEBAR_HELV = [278,278,355,556,556,889,667,191,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,556,1015,667,667,722,722,667,611,778,722,278,500,667,556,833,722,778,667,778,722,667,611,722,667,944,667,667,611,278,278,278,469,556,333,556,556,500,556,556,278,556,556,222,222,500,222,833,556,556,556,556,333,500,278,556,500,722,500,500,500,334,260,334,584];
+var LEBAR_HELV_TEBAL = [278,333,474,556,556,889,722,238,333,333,389,584,278,333,278,278,556,556,556,556,556,556,556,556,556,556,278,278,584,584,584,611,975,722,722,722,722,667,611,778,722,278,500,722,611,833,722,778,667,778,722,667,611,722,667,944,667,667,611,333,278,333,584,556,333,556,611,556,611,556,333,611,611,278,278,556,278,889,611,611,611,611,389,556,333,611,556,722,556,556,500,334,260,334,584];
+/* Lebar khusus untuk byte WinAnsi di luar ASCII: …(133) ‘(145) ’(146) “(147) ”(148) –(150) —(151) ·(183). */
+var LEBAR_HELV_KHUSUS = {133:556, 145:238, 146:238, 147:474, 148:474, 150:556, 151:1000, 183:278, 8211:556, 8212:1000, 8216:238, 8217:238, 8220:474, 8221:474, 8230:556};
+function pdfLebar(teks, tebal){
+  var tabel = tebal ? LEBAR_HELV_TEBAL : LEBAR_HELV, w = 0;
+  for (var i=0;i<teks.length;i++){
+    var k = teks.charCodeAt(i);
+    if (k>=32 && k<=126) w += tabel[k-32];
+    else if (LEBAR_HELV_KHUSUS[k]) w += LEBAR_HELV_KHUSUS[k];
+    else w += 556;
+  }
+  return w;
 }
-function gambarKartu(ctx, x, y, w, h, s, qrImg){
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(x, y, w, h);
-  ctx.strokeStyle = "#43617d"; ctx.lineWidth = Math.max(3, w*0.008); ctx.strokeRect(x+4, y+4, w-8, h-8);
-  ctx.fillStyle = "#2f485f"; ctx.textAlign = "center";
-  ctx.font = "700 "+Math.round(h*0.055)+"px 'Plus Jakarta Sans', sans-serif";
-  ctx.fillText("KARTU SISWA · SMP NEGERI 2 KEBONAGUNG", x+w/2, y+h*0.13);
-  ctx.fillStyle = "#1c2b36";
-  ctx.font = "800 "+Math.round(h*0.085)+"px 'Plus Jakarta Sans', sans-serif";
-  var nama = s.nama;
-  while (ctx.measureText(nama).width > w*0.92 && nama.length > 4) nama = nama.slice(0, -2);
-  if (nama !== s.nama) nama += "…";
-  ctx.fillText(nama, x+w/2, y+h*0.27);
-  ctx.fillStyle = "#54687a";
-  ctx.font = "600 "+Math.round(h*0.06)+"px 'Plus Jakarta Sans', sans-serif";
-  ctx.fillText("Kelas "+s.kelas, x+w/2, y+h*0.37);
+function pdfAngka(n){ return String(Math.round(n*100)/100); }
+function pdfTeks(s){
+  /* Bungkus teks sebagai string literal PDF (pengodean WinAnsi, 1 byte per huruf). */
+  var peta = {8211:150, 8212:151, 8216:145, 8217:146, 8220:147, 8221:148, 8230:133};
+  var keluar = "";
+  for (var i=0;i<s.length;i++){
+    var k = s.charCodeAt(i);
+    if (k===40 || k===41 || k===92) keluar += "\\" + s.charAt(i);
+    else if (k>=32 && k<=126) keluar += s.charAt(i);
+    else if (peta[k]) keluar += String.fromCharCode(peta[k]);
+    else if (k===0xB7 || (k>=0xA0 && k<=0xFF && k!==0xAD)) keluar += String.fromCharCode(k);
+    else keluar += "?";
+  }
+  return "(" + keluar + ")";
+}
+function pdfTeksTengah(ops, teks, tebal, ukuran, cx, garisDasar, maksLebar){
+  /* Teks terpusat di cx; dipotong seperti kartu di layar bila terlalu panjang. */
+  var t = teks;
+  while (t.length > 4 && pdfLebar(t, tebal)*ukuran/1000 > maksLebar) t = t.slice(0, -2);
+  if (t !== teks) t += "…";
+  var lebar = pdfLebar(t, tebal)*ukuran/1000;
+  ops.push("BT " + (tebal ? "/F2 " : "/F1 ") + pdfAngka(ukuran) + " Tf 1 0 0 1 " + pdfAngka(cx - lebar/2) + " " + pdfAngka(garisDasar) + " Tm " + pdfTeks(t) + " Tj ET");
+}
+function modulQr(teks){
+  /* Matriks modul QR (1 = hitam) dari pustaka QR yang sama dengan kartu di
+     layar — tanpa merender gambar, supaya kartu yang belum tampil di layar
+     pun tetap bisa dibuat QR-nya. */
+  var wadah = document.createElement("div");
+  var qr = new QRCode(wadah, {text: teks, width: 120, height: 120, correctLevel: QRCode.CorrectLevel.M});
+  var model = qr._oQRCode, n = model.getModuleCount(), grid = [];
+  for (var r=0;r<n;r++){ var baris=[]; for (var c=0;c<n;c++) baris.push(model.isDark(r,c)?1:0); grid.push(baris); }
+  return grid;
+}
+function qrKePdf(ops, grid, x, y, ukuran){
+  /* Gambar QR sebagai kotak vektor; modul hitam yang bersebelahan digabung
+     per baris supaya berkas tetap kecil. x,y = sudut kiri-bawah kotak QR. */
+  var n = grid.length, m = ukuran/n;
+  for (var r=0;r<n;r++){
+    var c=0;
+    while (c<n){
+      if (!grid[r][c]){ c++; continue; }
+      var awal=c;
+      while (c<n && grid[r][c]) c++;
+      ops.push(pdfAngka(x+awal*m)+" "+pdfAngka(y+(n-1-r)*m)+" "+pdfAngka((c-awal)*m)+" "+pdfAngka(m)+" re f");
+    }
+  }
+}
+function kartuKePdf(ops, x, y, w, h, s, grid){
+  /* Satu kartu siswa di halaman PDF. x,y = sudut kiri-bawah kartu (koordinat
+     PDF: titik nol di kiri-bawah halaman). Tata letak sama dengan kartu di
+     layar: nama sekolah, nama siswa, kelas, QR, NIS. */
+  ops.push("0.263 0.38 0.49 RG 1.2 w "+pdfAngka(x+3)+" "+pdfAngka(y+3)+" "+pdfAngka(w-6)+" "+pdfAngka(h-6)+" re S");
+  /* Tanda potong: garis pendek abu-abu di tiap sudut kartu. */
+  ops.push("0.75 0.75 0.75 RG 0.6 w");
+  var sudut = [[x,y+h],[x+w,y+h],[x,y],[x+w,y]];
+  for (var i=0;i<4;i++){
+    var px = sudut[i][0], py = sudut[i][1];
+    var ax = (px===x) ? -5 : 5, ay = (py===y+h) ? 5 : -5;
+    ops.push(pdfAngka(px)+" "+pdfAngka(py)+" m "+pdfAngka(px+ax)+" "+pdfAngka(py)+" l S");
+    ops.push(pdfAngka(px)+" "+pdfAngka(py)+" m "+pdfAngka(px)+" "+pdfAngka(py+ay)+" l S");
+  }
+  ops.push("0.184 0.282 0.373 rg");
+  pdfTeksTengah(ops, "KARTU SISWA · SMP NEGERI 2 KEBONAGUNG", true, h*0.05, x+w/2, y+h*0.87, w*0.92);
+  ops.push("0.11 0.169 0.212 rg");
+  pdfTeksTengah(ops, s.nama, true, h*0.085, x+w/2, y+h*0.73, w*0.92);
+  ops.push("0.329 0.408 0.478 rg");
+  pdfTeksTengah(ops, "Kelas "+s.kelas, false, h*0.06, x+w/2, y+h*0.63, w*0.92);
   var qs = h*0.42;
-  if (qrImg) ctx.drawImage(qrImg, x+(w-qs)/2, y+h*0.42, qs, qs);
-  ctx.fillStyle = "#1c2b36";
-  ctx.font = "600 "+Math.round(h*0.065)+"px 'IBM Plex Mono', monospace";
-  ctx.fillText("NIS "+s.nis, x+w/2, y+h*0.95);
+  ops.push("0 0 0 rg");
+  qrKePdf(ops, grid, x+(w-qs)/2, y+h*0.16, qs);
+  ops.push("0.11 0.169 0.212 rg");
+  pdfTeksTengah(ops, "NIS "+s.nis, false, h*0.065, x+w/2, y+h*0.05, w*0.92);
 }
-function simpanCanvas(canvas, namaFile, pesan){
+function rakitPdf(halaman){
+  /* Rakit berkas PDF dari daftar isi halaman (satu string operator per halaman).
+     Tiap halaman A4; fon Helvetica (/F1) dan Helvetica-Bold (/F2). */
+  var jumlah = halaman.length;
+  var objek = [];
+  objek[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+  var anak = [];
+  for (var i=0;i<jumlah;i++) anak.push((5+2*i)+" 0 R");
+  objek[2] = "<< /Type /Pages /Kids ["+anak.join(" ")+"] /Count "+jumlah+" >>";
+  objek[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+  objek[4] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>";
+  for (var p=0;p<jumlah;p++){
+    var isi = halaman[p];
+    objek[5+2*p] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 "+PDF_A4_W+" "+PDF_A4_H+"] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents "+(6+2*p)+" 0 R >>";
+    objek[6+2*p] = "<< /Length "+isi.length+" >>\nstream\n"+isi+"\nendstream";
+  }
+  var total = 4 + jumlah*2;
+  var pdf = "%PDF-1.4\n";
+  var geser = [0];
+  for (var id=1; id<=total; id++){
+    geser[id] = pdf.length;
+    pdf += id+" 0 obj\n"+objek[id]+"\nendobj\n";
+  }
+  var xref = pdf.length;
+  pdf += "xref\n0 "+(total+1)+"\n0000000000 65535 f \n";
+  for (var k=1;k<=total;k++){
+    var g = String(geser[k]);
+    while (g.length<10) g = "0"+g;
+    pdf += g+" 00000 n \n";
+  }
+  pdf += "trailer\n<< /Size "+(total+1)+" /Root 1 0 R >>\nstartxref\n"+xref+"\n%%EOF";
+  return pdf;
+}
+function namaBerkasKartu(nama){
+  return (nama || "").toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || "siswa";
+}
+function unduhPdf(pdfStr, namaFile, pesan){
   var status = document.getElementById("cardDlStatus");
   try {
+    var bytes = new Uint8Array(pdfStr.length);
+    for (var i=0;i<pdfStr.length;i++) bytes[i] = pdfStr.charCodeAt(i) & 0xFF;
+    var blob = new Blob([bytes], {type: "application/pdf"});
     var a = document.createElement("a");
-    a.href = canvas.toDataURL("image/png"); a.download = namaFile;
+    a.href = URL.createObjectURL(blob); a.download = namaFile;
     document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 4000);
     if (status) status.textContent = pesan;
   } catch(e){
-    if (status) status.textContent = "Unduhan gambar kartu gagal di perangkat ini. Cara lain: ketuk Cetak Semua Kartu, atau tangkap layar kartu yang diinginkan.";
+    if (status) status.textContent = "Unduhan PDF kartu gagal di perangkat ini. Cara lain: gunakan menu Cetak pada peramban/HP.";
   }
 }
 function unduhKartuSatu(s){
-  qrImageFor(s.nis).then(function(qrImg){
-    var c = document.createElement("canvas"); c.width = 1000; c.height = 620;
-    gambarKartu(c.getContext("2d"), 0, 0, 1000, 620, s, qrImg);
-    simpanCanvas(c, "kartu-siswa-"+s.nis+"-"+s.nama.toLowerCase().replace(/[^a-z0-9]+/g,"-")+".png",
-      "✓ Kartu "+s.nama+" (NIS "+s.nis+") terunduh sebagai PNG. Buka gambarnya di HP/perangkat lain, lalu pindai QR-nya dari halaman Scan Absensi.");
-  });
+  var status = document.getElementById("cardDlStatus");
+  try {
+    var w = 420, h = 260;
+    var ops = [];
+    kartuKePdf(ops, (PDF_A4_W-w)/2, (PDF_A4_H-h)/2, w, h, s, modulQr(s.qr || s.nis));
+    var pdf = rakitPdf([ops.join("\n")]);
+    unduhPdf(pdf, "Kartu-"+s.nis+"-"+namaBerkasKartu(s.nama)+".pdf",
+      "✓ Kartu "+s.nama+" (NIS "+s.nis+") terunduh sebagai PDF A4 (1 halaman). Cetak langsung, lalu pindai QR-nya dari halaman Scan Absensi.");
+  } catch(e){
+    if (status) status.textContent = "Unduhan PDF kartu gagal di perangkat ini. Cara lain: gunakan menu Cetak pada peramban/HP.";
+  }
 }
 document.getElementById("dlAllCardsBtn").addEventListener("click", function(){
   var status = document.getElementById("cardDlStatus");
   var kelas = kelasKartuSel ? kelasKartuSel.value : "";
-  if (!kelas){ if (status) status.textContent = "Pilih dulu satu kelas di atas, lalu unduh lembar kartu kelas itu (402 kartu terlalu banyak untuk satu lembar)."; return; }
-  var daftar = STUDENTS.filter(function(s){ return s.kelas === kelas; });
-  if (status) status.textContent = "Menyiapkan lembar berisi "+daftar.length+" kartu kelas "+kelas+"…";
-  var janji = daftar.map(function(s){ return qrImageFor(s.nis); });
-  Promise.all(janji).then(function(imgs){
-    var cols = 3, cw = 780, ch = 484, gap = 30, padL = 40;
-    var rows = Math.ceil(daftar.length / cols);
-    var c = document.createElement("canvas");
-    c.width = padL*2 + cols*cw + (cols-1)*gap;
-    c.height = padL*2 + rows*ch + (rows-1)*gap;
-    var ctx = c.getContext("2d");
-    ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, c.width, c.height);
-    daftar.forEach(function(s, i){
-      var x = padL + (i % cols) * (cw + gap);
-      var y = padL + Math.floor(i / cols) * (ch + gap);
-      gambarKartu(ctx, x, y, cw, ch, s, imgs[i]);
-    });
-    simpanCanvas(c, "kartu-siswa-kelas-"+kelas+".png",
-      "✓ Satu lembar PNG berisi "+daftar.length+" kartu kelas "+kelas+" terunduh. Cetak lembar itu atau tampilkan di perangkat lain, lalu pindai tiap QR dari halaman Scan Absensi.");
-  });
+  var daftar = STUDENTS.filter(function(s){ return !kelas || s.kelas === kelas; });
+  if (!daftar.length){ if (status) status.textContent = "Tidak ada kartu pada pilihan ini."; return; }
+  if (status) status.textContent = "Menyiapkan PDF berisi "+daftar.length+" kartu"+(kelas ? " kelas "+kelas : "")+"…";
+  setTimeout(function(){
+    try {
+      var halaman = [];
+      var perHal = PDF_KARTU_KOLOM * PDF_KARTU_BARIS;
+      var w = (PDF_A4_W - 2*PDF_KARTU_MARGIN - (PDF_KARTU_KOLOM-1)*PDF_KARTU_GAPX) / PDF_KARTU_KOLOM;
+      var h = (PDF_A4_H - 2*PDF_KARTU_MARGIN - (PDF_KARTU_BARIS-1)*PDF_KARTU_GAPY) / PDF_KARTU_BARIS;
+      for (var i=0;i<daftar.length;i+=perHal){
+        var ops = [];
+        var potong = daftar.slice(i, i+perHal);
+        potong.forEach(function(s, j){
+          var kolom = j % PDF_KARTU_KOLOM, baris = Math.floor(j / PDF_KARTU_KOLOM);
+          var x = PDF_KARTU_MARGIN + kolom*(w+PDF_KARTU_GAPX);
+          var yAtas = PDF_A4_H - PDF_KARTU_MARGIN - baris*(h+PDF_KARTU_GAPY);
+          kartuKePdf(ops, x, yAtas-h, w, h, s, modulQr(s.qr || s.nis));
+        });
+        /* Nomor halaman kecil di margin bawah. */
+        ops.push("0.4 0.4 0.4 rg");
+        pdfTeksTengah(ops, "Halaman "+(halaman.length+1)+" dari "+Math.ceil(daftar.length/perHal), false, 8, PDF_A4_W/2, 18, PDF_A4_W);
+        halaman.push(ops.join("\n"));
+      }
+      var pdf = rakitPdf(halaman);
+      var namaFile = kelas ? "Kartu-Siswa-Kelas-"+kelas.replace(/[^A-Za-z0-9]+/g,"-")+".pdf" : "Kartu-Siswa-Semua.pdf";
+      unduhPdf(pdf, namaFile,
+        "✓ PDF berisi "+daftar.length+" kartu"+(kelas ? " kelas "+kelas : "")+" ("+halaman.length+" halaman A4) terunduh. Cetak langsung, gunting tiap kartu mengikuti garisnya, lalu pindai tiap QR dari halaman Scan Absensi.");
+    } catch(e){
+      if (status) status.textContent = "Unduhan PDF kartu gagal di perangkat ini. Cara lain: gunakan menu Cetak pada peramban/HP.";
+    }
+  }, 30);
 });
 /* Mencetak: gunakan menu Cetak peramban/HP — CSS @media print di atas membuat yang
    tercetak hanya kartu-kartunya (2 per baris), tanpa header dan navigasi. */
-
 /* ================= PEMINDAI KAMERA ================= */
 var camStream = null, camRaf = 0, camDetector = null, camBusy = false;
 var camTerakhir = {teks:"", kapan:0};
