@@ -2605,7 +2605,7 @@ function matikanKamera(pesan){
   if (pesan) camStatus(pesan);
 }
 document.getElementById("camStopBtn").addEventListener("click", function(){
-  matikanKamera("Kamera tidak berfungsi, gunakan CARA CADANGAN");
+  matikanKamera("Kamera tidak berfungsi atau siswa tidak membawa Kartu, gunakan CARA CADANGAN");
 });
 document.getElementById("camStartBtn").addEventListener("click", function(){
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia){
